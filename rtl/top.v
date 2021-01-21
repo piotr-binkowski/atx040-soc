@@ -150,7 +150,7 @@ cpuif cpuif_i (
 	.clk(sys_clk),
 	.bclk(cpu_bclk_i),
 
-	.rst(),
+	.reset(1'b0),
 
 	.cpu_ad_i(cpu_ad_i),
 	.cpu_ad_o(cpu_ad_o),

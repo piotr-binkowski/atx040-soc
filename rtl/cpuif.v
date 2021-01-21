@@ -2,7 +2,7 @@ module cpuif (
 	input  wire clk,
 	input  wire bclk,
 
-	output wire rst,
+	input  wire reset,
 
 	output wire [31:0] cpu_ad_i,
 	input  wire [31:0] cpu_ad_o,
@@ -64,23 +64,25 @@ end
 
 /* Reset */
 
-wire rst_i;
+wire rst_cpu;
+wire rst_fsm;
 
 reg [10:0] rst_cnt = 0;
 
 always @(posedge clk) begin
-	if(~cpu_rsto) begin
+	if(reset) begin
 		rst_cnt <= 0;
 	end else if (rst_cnt < 1024) begin
 		rst_cnt <= rst_cnt + 1;
 	end
 end
 
-assign rst_i     = rst_cnt > 511  ? 1'b0 : 1'b1;
-assign cpu_cdis  = rst_cnt > 1023 ? 1'b1 : 1'b0;
+assign rst_cpu  = rst_cnt > (256)  ? 1'b0 : 1'b1;
+assign rst_fsm  = rst_cnt > (256+512+8) ? 1'b0 : 1'b1;
 
-assign rst       = rst_i;
-assign cpu_rsti  = ~rst_i;
+assign cpu_cdis = ~rst_fsm;
+
+assign cpu_rsti = ~rst_cpu;
 
 /* Bus */
 
@@ -138,7 +140,7 @@ assign cpu_ad_t  = ad_t_i;
 reg [2:0] xfer_len;
 
 always @(posedge clk) begin
-	if(rst_i) begin
+	if(rst_fsm) begin
 		state  <= IDLE;
 		stb_o  <= 1'b0;
 		dir_i  <= 1'b1;
@@ -193,12 +195,12 @@ always @(posedge clk) begin
 				endcase
 			end
 
-			READ0: begin // phase == 1
+			READ0: if(phase == 1) begin
 				stb_o <= 1'b1;
 				we_o  <= 1'b0;
 				state <= READ1;
 			end
-			READ1: if(wb_ack_i && stb_o) begin // phase >= 2
+			READ1: if(wb_ack_i && stb_o) begin
 				dir_i <= 1'b0;
 				stb_o <= 1'b0;
 				we_o  <= 1'b0;
@@ -217,9 +219,9 @@ always @(posedge clk) begin
 				if(xfer_len == 3'd1) begin
 					state <= IDLE;
 				end else begin
-					state    <= READ0;
-					xfer_len <= xfer_len - 1;
-					adr_o    <= adr_o + 4;
+					state      <= READ0;
+					xfer_len   <= xfer_len - 1;
+					adr_o[3:2] <= adr_o[3:2] + 1'b1;
 				end
 			end
 
@@ -243,9 +245,9 @@ always @(posedge clk) begin
 				if(xfer_len == 3'd1) begin
 					state <= IDLE;
 				end else begin
-					state    <= WRITE0;
-					xfer_len <= xfer_len - 1;
-					adr_o    <= adr_o + 4;
+					state      <= WRITE0;
+					xfer_len   <= xfer_len - 1;
+					adr_o[3:2] <= adr_o[3:2] + 1'b1;
 				end
 			end
 
