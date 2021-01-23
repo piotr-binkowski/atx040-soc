@@ -181,14 +181,16 @@ cpuif cpuif_i (
 	.wb_dat_i(dat_i)
 );
 
-wb_rom rom_i (
+wb_rom #(
+	.INIT("rom.mem")
+) rom_i (
 	.clk(sys_clk),
 	.cyc_i(cyc_o),
 	.stb_i(rom_stb),
 	.ack_o(rom_ack),
 	.dat_o(dat_i),
 	.dat_i(dat_o),
-	.we_o(we_o),
+	.we_i(1'b0),
 	.adr_i(adr_o)
 );
 

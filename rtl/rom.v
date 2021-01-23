@@ -1,31 +1,42 @@
-module wb_rom (
-	input  wire clk,
-	
-	input  wire cyc_i,
-	input  wire stb_i,
-	output wire ack_o,
-	output wire [31:0] dat_o,
-	input  wire [31:0] dat_i,
-	input  wire [9:0] adr_i,
-	input  wire we_o
+module wb_rom(clk, cyc_i, stb_i, adr_i, we_i, dat_i, sel_i, ack_o, dat_o);
+
+parameter INIT  = "";
+parameter SIZE  = 1024;
+
+parameter  AW   = $clog2(SIZE);
+localparam DW   = 32;
+localparam COLS = 4;
+
+input clk;
+
+input cyc_i;
+input stb_i;
+input we_i;
+input [AW-1:0] adr_i;
+input [DW-1:0] dat_i;
+input [COLS-1:0] sel_i;
+
+output [DW-1:0] dat_o;
+output reg ack_o = 1'b0;
+
+bram #(
+	.INIT(INIT),
+	.SIZE(SIZE),
+	.COLS(COLS)
+) bram_i (
+	.clk(clk),
+	.wstrb(4'b0),
+	.waddr(32'd0),
+	.wdata(32'd0),
+	.raddr(adr_i),
+	.rdata(dat_o)
 );
 
-reg [31:0] mem [0:1023];
-
-initial
-	$readmemh("rom.mem", mem);
-
-assign ack_o = stb_i;
-
-reg [31:0] dout;
-
-assign dat_o = dout;
-
-always @(adr_i)
-	dout <= mem[adr_i];
-
 always @(posedge clk)
-	if(stb_i == 1'b1 && we_o == 1'b1)
-		mem[adr_i] <= dat_i;
+	if(ack_o)
+		ack_o <= 1'b0; 
+	else
+		ack_o <= stb_i;
 
 endmodule
+
