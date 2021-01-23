@@ -196,12 +196,21 @@ wb_rom #(
 
 wb_uart uart_i (
 	.clk(sys_clk),
+	.rst(1'b0),
+
 	.txd(uart_txd),
+	.rxd(1'b1),
+
 	.cyc_i(cyc_o),
 	.stb_i(uart_stb),
-	.ack_o(uart_ack),
+	.we_i(we_o),
+
+	.adr_i(adr_i),
 	.dat_i(dat_o),
-	.we_o(we_o)
+	.sel_i(sel_o),
+
+	.ack_o(uart_ack),
+	.dat_o()
 );
 
 assign sdram_cke = 0;
