@@ -126,31 +126,20 @@ endgenerate
 
 wire cyc_o;
 wire stb_o;
-wire rom_stb;
-wire uart_stb;
-
 wire ack_i;
-wire rom_ack;
-wire uart_ack;
-
 wire we_o;
 wire [3:0] sel_o;
-
 wire [29:0] adr_o;
-
 wire [31:0] dat_o;
 wire [31:0] dat_i;
 
-assign rom_stb  = stb_o && (adr_o[29] == 1'b0);
-assign uart_stb = stb_o && (adr_o[29] == 1'b1);
-
-assign ack_i = rom_ack | uart_ack;
+wire rst_o = 1'b0;
 
 cpuif cpuif_i (
-	.clk(sys_clk),
-	.bclk(cpu_bclk_i),
+	.clk_i(sys_clk),
+	.rst_i(rst_o),
 
-	.reset(1'b0),
+	.bclk(cpu_bclk_i),
 
 	.cpu_ad_i(cpu_ad_i),
 	.cpu_ad_o(cpu_ad_o),
@@ -181,37 +170,93 @@ cpuif cpuif_i (
 	.wb_dat_i(dat_i)
 );
 
-wb_rom #(
+wire        rom_stb, ram_stb, uart_stb, sdram_stb;
+wire        rom_ack, ram_ack, uart_ack, sdram_ack;
+wire [31:0] rom_dat, ram_dat, uart_dat, sdram_dat;
+
+wb_dec dec_i (
+	.clk_i(sys_clk),
+	.rst_i(rst_o),
+	.stb_i(stb_o),
+	.adr_i(adr_o),
+	.ack_o(ack_i),
+	.dat_o(dat_i),
+
+	.rom_stb_o(rom_stb),
+	.rom_ack_i(rom_ack),
+	.rom_dat_i(rom_dat),
+
+	.ram_stb_o(ram_stb),
+	.ram_ack_i(ram_ack),
+	.ram_dat_i(ram_dat),
+
+	.uart_stb_o(uart_stb),
+	.uart_ack_i(uart_ack),
+	.uart_dat_i(uart_dat),
+
+	.sdram_stb_o(sdram_stb),
+	.sdram_ack_i(sdram_ack),
+	.sdram_dat_i(sdram_dat)
+);
+
+wb_mem #(
+	.ROM("TRUE"),
 	.INIT("rom.mem")
 ) rom_i (
-	.clk(sys_clk),
+	.clk_i(sys_clk),
+	.rst_i(rst_o),
+
 	.cyc_i(cyc_o),
 	.stb_i(rom_stb),
-	.ack_o(rom_ack),
-	.dat_o(dat_i),
+
+	.we_i(we_o),
+	.adr_i(adr_o),
+
+	.sel_i(sel_o),
 	.dat_i(dat_o),
-	.we_i(1'b0),
-	.adr_i(adr_o)
+
+	.ack_o(rom_ack),
+	.dat_o(rom_dat)
+);
+
+wb_mem ram_i (
+	.clk_i(sys_clk),
+	.rst_i(rst_o),
+
+	.cyc_i(cyc_o),
+	.stb_i(ram_stb),
+
+	.we_i(we_o),
+	.adr_i(adr_o),
+
+	.sel_i(sel_o),
+	.dat_i(dat_o),
+
+	.ack_o(ram_ack),
+	.dat_o(ram_dat)
 );
 
 wb_uart uart_i (
-	.clk(sys_clk),
-	.rst(1'b0),
+	.clk_i(sys_clk),
+	.rst_i(rst_o),
 
 	.txd(uart_txd),
-	.rxd(1'b1),
+	.rxd(uart_rxd),
 
 	.cyc_i(cyc_o),
 	.stb_i(uart_stb),
-	.we_i(we_o),
 
-	.adr_i(adr_i),
-	.dat_i(dat_o),
+	.we_i(we_o),
+	.adr_i(adr_o),
+
 	.sel_i(sel_o),
+	.dat_i(dat_o),
 
 	.ack_o(uart_ack),
-	.dat_o()
+	.dat_o(uart_dat)
 );
+
+/* Unused pins */
 
 assign sdram_cke = 0;
 assign sdram_dm  = 0;

@@ -1,4 +1,4 @@
-module wb_uart(clk, rst, txd, rxd, cyc_i, stb_i, adr_i, we_i, dat_i, sel_i, ack_o, dat_o);
+module wb_uart(clk_i, rst_i, cyc_i, stb_i, adr_i, we_i, dat_i, sel_i, ack_o, dat_o, txd, rxd);
 
 parameter  DIV  = 861;
 parameter  CW   = $clog2(DIV);
@@ -7,27 +7,28 @@ localparam AW   = 2;
 localparam DW   = 32;
 localparam COLS = DW/8;
 
-input clk;
-input rst;
-
-output reg txd;
-input rxd;
+input clk_i;
+input rst_i;
 
 input cyc_i;
 input stb_i;
-input we_i;
 
 input [AW-1:0] adr_i;
+input we_i;
+
 input [DW-1:0] dat_i;
 input [COLS-1:0] sel_i;
 
 output [DW-1:0] dat_o;
 output reg ack_o;
 
+output reg txd;
+input rxd;
+
 reg [CW-1:0] cnt = 0;
 reg pulse = 1'b0;
 
-always @(posedge clk) begin
+always @(posedge clk_i) begin
 	if(cnt < DIV) begin
 		cnt   <= cnt + 1;
 		pulse <= 0;
@@ -39,7 +40,7 @@ end
 
 assign dat_o = 0;
 
-always @(posedge clk)
+always @(posedge clk_i)
 	if(ack_o)
 		ack_o <= 1'b0; 
 	else
@@ -53,8 +54,8 @@ fifo #(
 	.SIZE(64),
 	.DW(8)
 ) fifo_tx_i (
-	.clk(clk),
-	.rst(rst),
+	.clk(clk_i),
+	.rst(rst_i),
 	.wr(ack_o),
 	.wdata(dat_i[31:24]),
 	.rd(tx_rd),
@@ -66,7 +67,7 @@ fifo #(
 reg [3:0] tx_cnt = 4'd10;
 reg [9:0] tx_reg;
 
-always @(posedge clk) begin
+always @(posedge clk_i) begin
 	tx_rd <= 1'b0;
 	if (tx_cnt == 4'd10) begin
 		txd    <= 1'b1;

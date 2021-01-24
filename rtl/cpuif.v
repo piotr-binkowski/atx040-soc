@@ -1,8 +1,8 @@
 module cpuif (
-	input  wire clk,
-	input  wire bclk,
+	input  wire clk_i,
+	input  wire rst_i,
 
-	input  wire reset,
+	input  wire bclk,
 
 	output wire [31:0] cpu_ad_i,
 	input  wire [31:0] cpu_ad_o,
@@ -50,11 +50,11 @@ always @(posedge bclk) begin
 	bclk_phase <= ~bclk_phase;
 end
 
-always @(posedge clk) begin
+always @(posedge clk_i) begin
 	clk_phase <= bclk_phase;
 end
 
-always @(posedge clk) begin
+always @(posedge clk_i) begin
 	if(clk_phase ^ bclk_phase) begin
 		phase <= 2;
 	end else begin
@@ -69,8 +69,8 @@ wire rst_fsm;
 
 reg [10:0] rst_cnt = 0;
 
-always @(posedge clk) begin
-	if(reset) begin
+always @(posedge clk_i) begin
+	if(rst_i) begin
 		rst_cnt <= 0;
 	end else if (rst_cnt < 1024) begin
 		rst_cnt <= rst_cnt + 1;
@@ -139,7 +139,7 @@ assign cpu_ad_t  = ad_t_i;
 
 reg [2:0] xfer_len;
 
-always @(posedge clk) begin
+always @(posedge clk_i) begin
 	if(rst_fsm) begin
 		state  <= IDLE;
 		stb_o  <= 1'b0;
