@@ -4,9 +4,7 @@ module cpuif (
 
 	input  wire bclk,
 
-	output wire [31:0] cpu_ad_i,
-	input  wire [31:0] cpu_ad_o,
-	output wire cpu_ad_t,
+	inout  wire [31:0] cpu_ad,
 
 	output wire cpu_dir,
 	output wire cpu_oe,
@@ -115,18 +113,19 @@ assign cpu_ta    = ta_o;
 
 wire [31:0] addr_i;
 assign addr_i    = {
-		cpu_ad_o[3],  cpu_ad_o[2],  cpu_ad_o[4],  cpu_ad_o[7],
-		cpu_ad_o[1],  cpu_ad_o[6],  cpu_ad_o[9],  cpu_ad_o[0],
-		cpu_ad_o[11], cpu_ad_o[5],  cpu_ad_o[8],  cpu_ad_o[10],
-		cpu_ad_o[16], cpu_ad_o[12], cpu_ad_o[13], cpu_ad_o[18],
-		cpu_ad_o[14], cpu_ad_o[15], cpu_ad_o[17], cpu_ad_o[19],
-		cpu_ad_o[20], cpu_ad_o[21], cpu_ad_o[29], cpu_ad_o[31],
-		cpu_ad_o[30], cpu_ad_o[27], cpu_ad_o[28], cpu_ad_o[26],
-		cpu_ad_o[24], cpu_ad_o[25], cpu_ad_o[22], cpu_ad_o[23]
+		cpu_ad[3],  cpu_ad[2],  cpu_ad[4],  cpu_ad[7],
+		cpu_ad[1],  cpu_ad[6],  cpu_ad[9],  cpu_ad[0],
+		cpu_ad[11], cpu_ad[5],  cpu_ad[8],  cpu_ad[10],
+		cpu_ad[16], cpu_ad[12], cpu_ad[13], cpu_ad[18],
+		cpu_ad[14], cpu_ad[15], cpu_ad[17], cpu_ad[19],
+		cpu_ad[20], cpu_ad[21], cpu_ad[29], cpu_ad[31],
+		cpu_ad[30], cpu_ad[27], cpu_ad[28], cpu_ad[26],
+		cpu_ad[24], cpu_ad[25], cpu_ad[22], cpu_ad[23]
 	};
 
+reg ad_t = 1;
 reg [31:0] dat_i = 0;
-assign cpu_ad_i  = dat_i;
+assign cpu_ad = (ad_t) ? {32{1'bZ}} : dat_i;
 
 reg dir_i        = 1;
 assign cpu_dir   = dir_i;
@@ -134,19 +133,16 @@ assign cpu_dir   = dir_i;
 reg oe_i         = 1;
 assign cpu_oe    = oe_i;
 
-reg ad_t_i       = 1;
-assign cpu_ad_t  = ad_t_i;
-
 reg [2:0] xfer_len;
 
 always @(posedge clk_i) begin
 	if(rst_fsm) begin
-		state  <= IDLE;
-		stb_o  <= 1'b0;
-		dir_i  <= 1'b1;
-		oe_i   <= 1'b0;
-		ad_t_i <= 1'b1;
-		ta_o   <= 1'b1;
+		state <= IDLE;
+		stb_o <= 1'b0;
+		dir_i <= 1'b1;
+		oe_i  <= 1'b0;
+		ad_t  <= 1'b1;
+		ta_o  <= 1'b1;
 	end else begin
 		case(state)
 			IDLE: if(phase == 0 && (~cpu_ts)) begin
@@ -208,14 +204,14 @@ always @(posedge clk_i) begin
 				state <= READ2;
 			end
 			READ2:  if(phase == 1) begin
-				ad_t_i <= 1'b0;
-				ta_o   <= 1'b0;
+				ad_t  <= 1'b0;
+				ta_o  <= 1'b0;
 				state <= READ3;
 			end
 			READ3:  if(phase == 1) begin
-				dir_i  <= 1'b1;
-				ad_t_i <= 1'b1;
-				ta_o   <= 1'b1;
+				dir_i <= 1'b1;
+				ad_t  <= 1'b1;
+				ta_o  <= 1'b1;
 				if(xfer_len == 3'd1) begin
 					state <= IDLE;
 				end else begin
@@ -226,7 +222,7 @@ always @(posedge clk_i) begin
 			end
 
 			WRITE0: if(phase == 0) begin
-				dat_o <= cpu_ad_o;
+				dat_o <= cpu_ad;
 				stb_o <= 1'b1;
 				we_o  <= 1'b1;
 				state <= WRITE1;

@@ -107,23 +107,6 @@ ODDR2 oddr_sdram_clk (
 	.Q(sdram_clk)
 );
 
-wire [31:0] cpu_ad_i;
-wire [31:0] cpu_ad_o;
-wire cpu_ad_t;
-
-genvar i;
-
-generate
-	for(i = 0; i < 32; i = i + 1) begin : iobuf_gen
-		IOBUF iobuf_cpu_ad (
-			.IO(cpu_ad[i]),
-			.O(cpu_ad_o[i]),
-			.I(cpu_ad_i[i]),
-			.T(cpu_ad_t)
-		);
-	end
-endgenerate
-
 wire cyc_o;
 wire stb_o;
 wire ack_i;
@@ -141,10 +124,7 @@ cpuif cpuif_i (
 
 	.bclk(cpu_bclk_i),
 
-	.cpu_ad_i(cpu_ad_i),
-	.cpu_ad_o(cpu_ad_o),
-	.cpu_ad_t(cpu_ad_t),
-
+	.cpu_ad(cpu_ad),
 	.cpu_dir(cpu_dir),
 	.cpu_oe(cpu_oe),
 
