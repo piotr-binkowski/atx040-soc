@@ -146,49 +146,35 @@ always @(posedge clk_i) begin
 	end else begin
 		case(state)
 			IDLE: if(phase == 0 && (~cpu_ts)) begin
-				case(cpu_tt)
-					TT_DEF: begin
-						case(cpu_siz)
-							SIZ_BYTE: begin
-								xfer_len <= 3'd1;
-								case(addr_i[1:0])
-									2'b00:
-										sel_o <= 4'b1000;
-									2'b01:
-										sel_o <= 4'b0100;
-									2'b10:
-										sel_o <= 4'b0010;
-									2'b11:
-										sel_o <= 4'b0001;
-								endcase
-							end
-							SIZ_WORD: begin
-								xfer_len <= 3'd1;
-								if(addr_i[1] == 1'b1)
-									sel_o <= 4'b0011;
-								else
-									sel_o <= 4'b1100;
-							end
-							SIZ_LONG: begin
-								xfer_len <= 3'd1;
-								sel_o    <= 4'b1111;
-							end
-							SIZ_LINE: begin
-								xfer_len <= 3'd4;
-								sel_o    <= 4'b1111;
-							end
-						endcase
-						adr_o <= addr_i;
-						if(cpu_rw == 1'b0) begin
-							state <= WRITE0;
-						end else begin
-							state <= READ0;
+				if(cpu_tt == TT_DEF) begin
+					xfer_len <= 3'd1;
+					case(cpu_siz)
+						SIZ_BYTE: begin
+							case(addr_i[1:0])
+								2'b00:
+									sel_o <= 4'b1000;
+								2'b01:
+									sel_o <= 4'b0100;
+								2'b10:
+									sel_o <= 4'b0010;
+								2'b11:
+									sel_o <= 4'b0001;
+							endcase
 						end
-					end
-					default: begin
-
-					end
-				endcase
+						SIZ_WORD: begin
+							sel_o <= (addr_i[1]) ? 4'b0011 : 4'b1100;
+						end
+						SIZ_LONG: begin
+							sel_o    <= 4'b1111;
+						end
+						SIZ_LINE: begin
+							sel_o    <= 4'b1111;
+							xfer_len <= 3'd4;
+						end
+					endcase
+					adr_o <= addr_i;
+					state <= (cpu_rw) ? READ0 : WRITE0;
+				end
 			end
 
 			READ0: if(phase == 1) begin
