@@ -1,6 +1,6 @@
 module sdram(
 	clk, rst,
-	req_ready, req_valid, req_len, req_addr, req_dir,
+	req_ready, req_valid, req_len, req_addr, req_we,
 	din, din_valid, din_ready, din_mask,
 	dout, dout_valid,
 	cke, cs, ras, cas, we,
@@ -19,11 +19,14 @@ parameter DW = 16;
 localparam AW = RW+CW+BW;
 localparam MW = DW/8;
 
+input clk;
+input rst;
+
 output req_ready;
 input req_valid;
 input [3:0] req_len;
 input [AW-1:0] req_addr;
-input req_dir;
+input req_we;
 
 input [DW-1:0] din;
 input [MW-1:0] din_mask;
@@ -39,20 +42,43 @@ output ras;
 output cas;
 output we;
 
-inout [DW-1:0] data;
-output reg [MW-1:0] dm;
+inout  [DW-1:0] data;
+output [MW-1:0] dm;
 
-output reg [RW-1:0] addr;
-output reg [BW-1:0] baddr;
+output [RW-1:0] addr;
+output [BW-1:0] baddr;
 
-reg data_t = 1'b1;
-reg [DW-1:0] data_o = {DW{1'b0}};
-assign data = (data_t) ? {DW{1'bZ}} : data_o;
+(* keep = "true" *) reg  [RW-1:0] addr_o;
+(* keep = "true" *) reg  [BW-1:0] baddr_o;
+(* keep = "true" *) reg  [DW-1:0] data_o;
+(* keep = "true" *) wire [DW-1:0] data_i;
+(* keep = "true" *) reg  [MW-1:0] dm_o;
+(* keep = "true" *) reg data_t = 1'b1;
+
+genvar i;
+generate
+	for (i = 0; i < RW; i = i + 1) begin
+		oreg oreg_a_i (clk, addr[i], addr_o[i]);
+	end
+	for (i = 0; i < BW; i = i + 1) begin
+		oreg oreg_ba_i (clk, baddr[i], baddr_o[i]);
+	end
+	for (i = 0; i < MW; i = i + 1) begin
+		oreg oreg_dm_i (clk, dm[i], dm_o[i]);
+	end
+	for (i = 0; i < DW; i = i + 1) begin
+		ioreg ioreg_d_i (clk, data[i], data_o[i], data_i[i], data_t);
+	end
+endgenerate
 
 assign cke = 1'b1;
 
-reg [3:0] cmd_o = 4'b1111;
-assign {cs, ras, cas, we} = cmd_o;
+(* keep = "true" *) reg [3:0] cmd_o = 4'b1111;
+
+oreg oreg_cs_i (clk, cs, cmd_o[3]);
+oreg oreg_ras_i (clk, ras, cmd_o[2]);
+oreg oreg_cas_i (clk, cas, cmd_o[1]);
+oreg oreg_we_i (clk, we, cmd_o[0]);
 
 /* Init delay */
 
@@ -60,7 +86,7 @@ reg [14:0] init_cnt = 15'd0;
 wire init_dly = (init_cnt < 15'h4000);
 
 always @(posedge clk) begin
-	if (rst) begin
+	if (rst)
 		init_cnt <= 15'd0;
 	else if (init_dly)
 		init_cnt <= init_cnt + 1'b1;
@@ -72,7 +98,7 @@ reg ref_en = 1'b0;
 reg [9:0] ref_cnt = 10'h000;
 wire ref_trg = (ref_cnt == 10'h300);
 reg ref_req = 1'b0;
-wire ref_ack = 1'b0;
+wire ref_ack;
 
 always @(posedge clk)
 	if ((!ref_en) || ref_trg)
@@ -101,35 +127,36 @@ localparam TRFC = 4'd6, TRP = 4'd2, TMRD = 4'd2, TRAS = 4'd5, TRC = 4'd6, TRCD =
 localparam WB_S = 1'b1, WB_BL = 1'b0, OP_STD = 2'b00, CL2 = 3'b010,
 	   CL3 = 3'b011, BT_SEQ = 1'b0, BL2 = 3'b001, BL1 = 3'b000;
 
-reg [4:0] state = INIT_NOP;
+reg [4:0] state = S_INOP;
 reg [3:0] cmd_d = 4'd1;
 
-assign ref_ack = ((state == IDLE) && (ref_req));
+assign ref_ack = ((state == S_IDLE) && (ref_req));
 
-assign req_ready = ((state == IDLE) && (!ref_req));
+assign req_ready = ((state == S_IDLE) && (!ref_req));
 
 assign din_ready = (state == S_WR);
 
 reg [AW-1:0] addr_i;
 reg [3:0] len_i;
-reg dir_i;
+reg we_i;
 
-reg [3:0] dvalid = 4'b0000;
+(* keep = "true" *) reg [4:0] dvalid = 5'b00000;
+
 assign dout_valid = dvalid[0];
-assign dout = data;
+assign dout = data_i;
 
 localparam CL = 2;
 
 always @(posedge clk) begin
 	if (rst) begin
-		state  <= INIT_NOP;
+		state  <= S_INOP;
 		cmd_o  <= NOP;
 		data_t <= 1'b1;
 		cmd_d  <= 4'd1;
 		ref_en <= 1'b0;
-	end else
+	end else begin
 		cmd_d  <= cmd_d + 1'b1;
-		dvalid <= {1'b0, dvalid[3:1]};
+		dvalid <= {1'b0, dvalid[4:1]};
 		case(state)
 			S_INOP: begin
 				cmd_o <= NOP;
@@ -140,8 +167,8 @@ always @(posedge clk) begin
 			end
 			S_IPRE: begin
 				if (cmd_d == 4'd1) begin
-					addr[10] <= 1'b1;
-					cmd_o <= PRE;
+					addr_o[10] <= 1'b1;
+					cmd_o      <= PRE;
 				end else
 					cmd_o <= NOP;
 
@@ -174,9 +201,9 @@ always @(posedge clk) begin
 			end
 			S_ILMR: begin
 				if (cmd_d == 4'd1) begin
-					addr  <= {3'b000, WB_BL, OP_STD, (CL == 2) ? CL2 : CL3, BT_SEQ, BL1};
-					baddr <= 2'b00;
-					cmd_o <= LMR;
+					addr_o  <= {3'b000, WB_BL, OP_STD, (CL == 2) ? CL2 : CL3, BT_SEQ, BL1};
+					baddr_o <= 2'b00;
+					cmd_o   <= LMR;
 				end else
 					cmd_o <= NOP;
 
@@ -195,31 +222,31 @@ always @(posedge clk) begin
 					state  <= S_ACT;
 					addr_i <= req_addr;
 					len_i  <= req_len;
-					dir_i  <= req_dir;
+					we_i   <= req_we;
 				end
 			end
 			S_REF: begin
-				if (cmd_d = 4'd1) begin
+				if (cmd_d == 4'd1) begin
 					cmd_o <= REF;
 				end else
 					cmd_o <= NOP;
 
 				if (cmd_d == TRFC) begin
 					cmd_d <= 4'd1;
-					state <= IDLE;
+					state <= S_IDLE;
 				end
 			end
 			S_ACT: begin
-				if (cmd_d = 4'd1) begin
-					cmd_o <= ACT;
-					addr  <= addr_i[AW-1-BW:CW];
-					baddr <= addr_i[AW-1:AW-BW];
+				if (cmd_d == 4'd1) begin
+					cmd_o   <= ACT;
+					addr_o  <= addr_i[AW-1-BW:CW];
+					baddr_o <= addr_i[AW-1:AW-BW];
 				end else
 					cmd_o <= NOP;
 
 				if (cmd_d == TRCD) begin
 					cmd_d <= 4'd1;
-					if (dir_i) begin
+					if (we_i) begin
 						data_t <= 1'b0;
 						state <= S_WR;
 					end else begin
@@ -230,10 +257,10 @@ always @(posedge clk) begin
 			end
 			S_WR: begin
 				cmd_o          <= (din_valid) ? WRITE : NOP;
-				addr           <= addr_i[CW-1:0];
+				addr_o         <= addr_i[CW-1:0];
 				addr_i[CW-1:0] <= addr_i[CW-1:0] + 1'b1;
 				data_o         <= din;
-				dm             <= din_mask;
+				dm_o           <= ~din_mask;
 				len_i          <= len_i - 1'b1;
 
 				if (len_i == 4'd1) begin
@@ -243,17 +270,19 @@ always @(posedge clk) begin
 			end
 			S_WREC: begin
 				cmd_o <= NOP;
-				dm    <= 2'b11;
+				//dm_o  <= 2'b11;
 				if (cmd_d == TWR) begin
 					cmd_d <= 4'd1;
 					state <= S_PRE;
 				end
 			end
 			S_RD: begin
-				cmd_o      <= READ;
-				dvalid[CL] <= 1'b1;
-				dm         <= 2'b00;
-				len_i      <= len_i - 1'b1;
+				cmd_o          <= READ;
+				addr_o         <= addr_i[CW-1:0];
+				addr_i[CW-1:0] <= addr_i[CW-1:0] + 1'b1;
+				dvalid[CL+1]   <= 1'b1;
+				dm_o           <= 2'b00;
+				len_i          <= len_i - 1'b1;
 
 				if (len_i == 4'd1) begin
 					cmd_d <= 4'd1;
@@ -262,7 +291,7 @@ always @(posedge clk) begin
 			end
 			S_RREC: begin
 				cmd_o <= NOP;
-				dm    <= 2'b11;
+				//dm_o  <= 2'b11;
 				if (cmd_d == CL) begin
 					cmd_d <= 4'd1;
 					state <= S_PRE;
@@ -270,14 +299,14 @@ always @(posedge clk) begin
 			end
 			S_PRE: begin
 				if (cmd_d == 4'd1) begin
-					addr[10] <= 1'b1;
-					cmd_o <= PRE;
+					addr_o[10] <= 1'b1;
+					cmd_o      <= PRE;
 				end else
 					cmd_o <= NOP;
 
 				if (cmd_d == TRP) begin
 					cmd_d <= 4'd1;
-					state <= IDLE;
+					state <= S_IDLE;
 				end
 			end
 		endcase

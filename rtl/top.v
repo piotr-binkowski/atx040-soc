@@ -236,16 +236,30 @@ wb_uart uart_i (
 	.dat_o(uart_dat)
 );
 
-/* Unused pins */
+wb_sdram sdram_i (
+	.clk_i(sys_clk),
+	.rst_i(rst_o),
+	.cyc_i(cyc_o),
+	.stb_i(sdram_stb),
+	.we_i(we_o),
+	.adr_i(adr_o),
+	.sel_i(sel_o),
+	.dat_i(dat_o),
+	.ack_o(sdram_ack),
+	.dat_o(sdram_dat),
 
-assign sdram_cke = 0;
-assign sdram_dm  = 0;
-assign sdram_a   = 0;
-assign sdram_ba  = 0;
-assign sdram_cas = 1;
-assign sdram_ras = 1;
-assign sdram_cs  = 1;
-assign sdram_we  = 1;
+	.cke(sdram_cke),
+	.cs(sdram_cs),
+	.ras(sdram_ras),
+	.cas(sdram_cas),
+	.we(sdram_we),
+	.d(sdram_d),
+	.dm(sdram_dm),
+	.a(sdram_a),
+	.ba(sdram_ba)
+);
+
+/* Unused pins */
 
 assign sd_cs   = 1;
 assign sd_mosi = 0;

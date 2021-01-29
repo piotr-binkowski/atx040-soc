@@ -21,6 +21,23 @@ module cpuif (
 	output wire cpu_irq,
 	output wire cpu_ta,
 
+	/* SDRAM bus */
+
+	output wire sd_req_valid,
+	input  wire sd_req_ready,
+	output wire [3:0] sd_req_len,
+	output wire [31:0] sd_req_addr,
+	output wire sd_req_we,
+
+	output wire [31:0] sd_dout,
+	output wire [3:0] sd_dout_mask,
+	output wire sd_dout_valid,
+	input  wire sd_dout_ready,
+
+	input  wire [31:0] sd_din,
+	input  wire sd_din_valid,
+	output wire sd_din_ready,
+
 	/* Wishbone bus */
 
 	output wire wb_cyc_o,
