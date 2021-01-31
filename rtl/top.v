@@ -150,9 +150,9 @@ cpuif cpuif_i (
 	.wb_dat_i(dat_i)
 );
 
-wire        rom_stb, ram_stb, uart_stb, sdram_stb;
-wire        rom_ack, ram_ack, uart_ack, sdram_ack;
-wire [31:0] rom_dat, ram_dat, uart_dat, sdram_dat;
+wire        rom_stb, ram_stb, periph_stb, sdram_stb;
+wire        rom_ack, ram_ack, periph_ack, sdram_ack;
+wire [31:0] rom_dat, ram_dat, periph_dat, sdram_dat;
 
 wb_dec dec_i (
 	.clk_i(sys_clk),
@@ -170,13 +170,30 @@ wb_dec dec_i (
 	.ram_ack_i(ram_ack),
 	.ram_dat_i(ram_dat),
 
-	.uart_stb_o(uart_stb),
-	.uart_ack_i(uart_ack),
-	.uart_dat_i(uart_dat),
+	.periph_stb_o(periph_stb),
+	.periph_ack_i(periph_ack),
+	.periph_dat_i(periph_dat),
 
 	.sdram_stb_o(sdram_stb),
 	.sdram_ack_i(sdram_ack),
 	.sdram_dat_i(sdram_dat)
+);
+
+wire uart_stb, uart_ack;
+wire [31:0] uart_dat;
+
+wb_arb #(
+	.SLAVES(2)	
+) arb_i (
+	.clk_i(sys_clk),
+	.rst_i(rst_o),
+	.stb_i(periph_stb),
+	.adr_i(adr_o),
+	.ack_o(periph_ack),
+	.dat_o(periph_dat),
+	.slv_stb_o({uart_stb}),
+	.slv_ack_i({uart_ack}),
+	.slv_dat_i({uart_dat})
 );
 
 wb_mem #(

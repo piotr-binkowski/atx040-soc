@@ -48,12 +48,12 @@ output [MW-1:0] dm;
 output [RW-1:0] addr;
 output [BW-1:0] baddr;
 
-(* keep = "true" *) reg  [RW-1:0] addr_o;
-(* keep = "true" *) reg  [BW-1:0] baddr_o;
-(* keep = "true" *) reg  [DW-1:0] data_o;
-(* keep = "true" *) wire [DW-1:0] data_i;
-(* keep = "true" *) reg  [MW-1:0] dm_o;
-(* keep = "true" *) reg data_t = 1'b1;
+reg  [RW-1:0] addr_o;
+reg  [BW-1:0] baddr_o;
+reg  [DW-1:0] data_o;
+wire [DW-1:0] data_i;
+reg  [MW-1:0] dm_o;
+reg data_t = 1'b1;
 
 genvar i;
 generate
@@ -73,7 +73,7 @@ endgenerate
 
 assign cke = 1'b1;
 
-(* keep = "true" *) reg [3:0] cmd_o = 4'b1111;
+reg [3:0] cmd_o = 4'b1111;
 
 oreg oreg_cs_i (clk, cs, cmd_o[3]);
 oreg oreg_ras_i (clk, ras, cmd_o[2]);
@@ -140,7 +140,7 @@ reg [AW-1:0] addr_i;
 reg [3:0] len_i;
 reg we_i;
 
-(* keep = "true" *) reg [4:0] dvalid = 5'b00000;
+reg [4:0] dvalid = 5'b00000;
 
 assign dout_valid = dvalid[0];
 assign dout = data_i;
