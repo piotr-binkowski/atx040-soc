@@ -140,6 +140,10 @@ cpuif cpuif_i (
 	.cpu_irq(cpu_irq),
 	.cpu_ta(cpu_ta),
 
+	.irq_req(1'b0),
+	.irq_vec(8'd25),
+	.irq_ack(),
+
 	.wb_cyc_o(cyc_o),
 	.wb_stb_o(stb_o),
 	.wb_ack_i(ack_i),

@@ -38,6 +38,12 @@ module cpuif (
 	input  wire sd_din_valid,
 	output wire sd_din_ready,
 
+	/* Interrupt controller */
+
+	input  wire irq_req,
+	input  wire [7:0] irq_vec,
+	output wire irq_ack,
+
 	/* Wishbone bus */
 
 	output wire wb_cyc_o,
@@ -52,7 +58,7 @@ module cpuif (
 	input  wire [31:0] wb_dat_i
 );
 
-assign cpu_irq  = 1;
+assign cpu_irq  = ~irq_req;
 
 /* Phase detect */
 
@@ -101,7 +107,7 @@ assign cpu_rsti = ~rst_cpu;
 
 /* Bus */
 
-parameter IDLE = 4'd0, READ0 = 4'd8, READ1 = 4'd9, READ2 = 4'd10, READ3 = 4'd11, WRITE0 = 4'd12, WRITE1 = 4'd13, WRITE2 = 4'd14, WRITE3 = 4'd15;
+parameter IDLE = 4'd0, IRQ0 = 4'd1, IRQ1 = 4'd2, IRQ2 = 4'd3, IRQ3 = 4'd4, READ0 = 4'd8, READ1 = 4'd9, READ2 = 4'd10, READ3 = 4'd11, WRITE0 = 4'd12, WRITE1 = 4'd13, WRITE2 = 4'd14, WRITE3 = 4'd15;
 
 parameter SIZ_BYTE = 2'b01, SIZ_WORD = 2'b10, SIZ_LONG = 2'b00, SIZ_LINE = 2'b11;
 
@@ -150,6 +156,9 @@ assign cpu_dir   = dir_i;
 reg oe_i         = 1;
 assign cpu_oe    = oe_i;
 
+reg ack_i        = 0;
+assign irq_ack   = ack_i;
+
 reg [2:0] xfer_len;
 
 always @(posedge clk_i) begin
@@ -160,6 +169,7 @@ always @(posedge clk_i) begin
 		oe_i  <= 1'b0;
 		ad_t  <= 1'b1;
 		ta_o  <= 1'b1;
+		ack_i <= 1'b0;
 	end else begin
 		case(state)
 			IDLE: if(phase == 0 && (~cpu_ts)) begin
@@ -191,7 +201,31 @@ always @(posedge clk_i) begin
 					endcase
 					adr_o <= addr_i;
 					state <= (cpu_rw) ? READ0 : WRITE0;
+				end else if(cpu_tt == TT_ACK) begin
+					dat_i <= {24'd0, irq_vec};
+					ack_i <= 1'b1;
+					state <= IRQ0;
 				end
+			end
+
+			IRQ0: if(phase == 1) begin
+				ack_i <= 1'b0;
+				state <= IRQ1;
+			end
+			IRQ1: if(phase == 2) begin
+				dir_i <= 1'b0;
+				state <= IRQ2;
+			end
+			IRQ2: if(phase == 1) begin
+				ad_t  <= 1'b0;
+				ta_o  <= 1'b0;
+				state <= IRQ3;
+			end
+			IRQ3: if(phase == 1) begin
+				dir_i <= 1'b1;
+				ad_t  <= 1'b1;
+				ta_o  <= 1'b1;
+				state <= IDLE;
 			end
 
 			READ0: if(phase == 1) begin
@@ -206,12 +240,12 @@ always @(posedge clk_i) begin
 				dat_i <= wb_dat_i;
 				state <= READ2;
 			end
-			READ2:  if(phase == 1) begin
+			READ2: if(phase == 1) begin
 				ad_t  <= 1'b0;
 				ta_o  <= 1'b0;
 				state <= READ3;
 			end
-			READ3:  if(phase == 1) begin
+			READ3: if(phase == 1) begin
 				dir_i <= 1'b1;
 				ad_t  <= 1'b1;
 				ta_o  <= 1'b1;
