@@ -35,6 +35,11 @@ module top(
 	output wire sdram_ras,
 	output wire sdram_cs,
 	output wire sdram_we,
+	/* Flash */
+	input  wire flash_miso,
+	output wire flash_mosi,
+	output wire flash_sck,
+	output wire flash_cs,
 	/* SD Card */
 	input  wire sd_miso,
 	output wire sd_mosi,
@@ -186,8 +191,11 @@ wb_dec dec_i (
 wire uart_stb, uart_ack;
 wire [31:0] uart_dat;
 
+wire flash_stb, flash_ack;
+wire [31:0] flash_dat;
+
 wb_arb #(
-	.SLAVES(2)	
+	.SLAVES(16)
 ) arb_i (
 	.clk_i(sys_clk),
 	.rst_i(rst_o),
@@ -195,9 +203,9 @@ wb_arb #(
 	.adr_i(adr_o),
 	.ack_o(periph_ack),
 	.dat_o(periph_dat),
-	.slv_stb_o({uart_stb}),
-	.slv_ack_i({uart_ack}),
-	.slv_dat_i({uart_dat})
+	.slv_stb_o({flash_stb, uart_stb}),
+	.slv_ack_i({flash_ack, uart_ack}),
+	.slv_dat_i({flash_dat, uart_dat})
 );
 
 wb_mem #(
@@ -255,6 +263,27 @@ wb_uart uart_i (
 
 	.ack_o(uart_ack),
 	.dat_o(uart_dat)
+);
+
+wb_spi flash_i (
+	.clk_i(sys_clk),
+	.rst_i(rst_o),
+	.sck(flash_sck),
+	.ss(flash_cs),
+	.miso(flash_miso),
+	.mosi(flash_mosi),
+
+	.cyc_i(cyc_o),
+	.stb_i(flash_stb),
+
+	.we_i(we_o),
+	.adr_i(adr_o),
+
+	.sel_i(sel_o),
+	.dat_i(dat_o),
+
+	.ack_o(flash_ack),
+	.dat_o(flash_dat)
 );
 
 wb_sdram sdram_i (
