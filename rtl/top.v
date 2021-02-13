@@ -194,6 +194,9 @@ wire [31:0] uart_dat;
 wire flash_stb, flash_ack;
 wire [31:0] flash_dat;
 
+wire timer_stb, timer_ack;
+wire [31:0] timer_dat;
+
 wb_arb #(
 	.SLAVES(16)
 ) arb_i (
@@ -203,9 +206,9 @@ wb_arb #(
 	.adr_i(adr_o),
 	.ack_o(periph_ack),
 	.dat_o(periph_dat),
-	.slv_stb_o({flash_stb, uart_stb}),
-	.slv_ack_i({flash_ack, uart_ack}),
-	.slv_dat_i({flash_dat, uart_dat})
+	.slv_stb_o({timer_stb, flash_stb, uart_stb}),
+	.slv_ack_i({timer_ack, flash_ack, uart_ack}),
+	.slv_dat_i({timer_dat, flash_dat, uart_dat})
 );
 
 wb_mem #(
@@ -284,6 +287,23 @@ wb_spi flash_i (
 
 	.ack_o(flash_ack),
 	.dat_o(flash_dat)
+);
+
+wb_tim timer_i (
+	.clk_i(sys_clk),
+	.rst_i(rst_o),
+
+	.cyc_i(cyc_o),
+	.stb_i(timer_stb),
+
+	.we_i(we_o),
+	.adr_i(adr_o),
+
+	.sel_i(sel_o),
+	.dat_i(dat_o),
+
+	.ack_o(timer_ack),
+	.dat_o(timer_dat)
 );
 
 wb_sdram sdram_i (
