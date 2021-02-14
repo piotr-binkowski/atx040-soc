@@ -121,7 +121,7 @@ wire [29:0] adr_o;
 wire [31:0] dat_o;
 wire [31:0] dat_i;
 
-wire rst_o = 1'b0;
+wire rst_o = !cpu_rsto;
 
 cpuif cpuif_i (
 	.clk_i(sys_clk),
@@ -197,6 +197,12 @@ wire [31:0] flash_dat;
 wire timer_stb, timer_ack;
 wire [31:0] timer_dat;
 
+wire sd_stb, sd_ack;
+wire [31:0] sd_dat;
+
+wire eth_stb, eth_ack;
+wire [31:0] eth_dat;
+
 wb_arb #(
 	.SLAVES(16)
 ) arb_i (
@@ -206,9 +212,9 @@ wb_arb #(
 	.adr_i(adr_o),
 	.ack_o(periph_ack),
 	.dat_o(periph_dat),
-	.slv_stb_o({timer_stb, flash_stb, uart_stb}),
-	.slv_ack_i({timer_ack, flash_ack, uart_ack}),
-	.slv_dat_i({timer_dat, flash_dat, uart_dat})
+	.slv_stb_o({eth_stb, sd_stb, timer_stb, flash_stb, uart_stb}),
+	.slv_ack_i({eth_ack, sd_ack, timer_ack, flash_ack, uart_ack}),
+	.slv_dat_i({eth_dat, sd_dat, timer_dat, flash_dat, uart_dat})
 );
 
 wb_mem #(
@@ -289,6 +295,48 @@ wb_spi flash_i (
 	.dat_o(flash_dat)
 );
 
+wb_spi sd_i (
+	.clk_i(sys_clk),
+	.rst_i(rst_o),
+	.sck(sd_sck),
+	.ss(sd_cs),
+	.miso(sd_miso),
+	.mosi(sd_mosi),
+
+	.cyc_i(cyc_o),
+	.stb_i(sd_stb),
+
+	.we_i(we_o),
+	.adr_i(adr_o),
+
+	.sel_i(sel_o),
+	.dat_i(dat_o),
+
+	.ack_o(sd_ack),
+	.dat_o(sd_dat)
+);
+
+wb_spi eth_i (
+	.clk_i(sys_clk),
+	.rst_i(rst_o),
+	.sck(eth_sck),
+	.ss(eth_cs),
+	.miso(eth_miso),
+	.mosi(eth_mosi),
+
+	.cyc_i(cyc_o),
+	.stb_i(eth_stb),
+
+	.we_i(we_o),
+	.adr_i(adr_o),
+
+	.sel_i(sel_o),
+	.dat_i(dat_o),
+
+	.ack_o(eth_ack),
+	.dat_o(eth_dat)
+);
+
 wb_tim timer_i (
 	.clk_i(sys_clk),
 	.rst_i(rst_o),
@@ -329,16 +377,9 @@ wb_sdram sdram_i (
 	.ba(sdram_ba)
 );
 
+assign eth_rst  = !rst_o;
+
 /* Unused pins */
-
-assign sd_cs   = 1;
-assign sd_mosi = 0;
-assign sd_sck  = 0;
-
-assign eth_cs   = 1;
-assign eth_mosi = 0;
-assign eth_sck  = 0;
-assign eth_rst  = 0;
 
 assign i2s_wsel = 0;
 assign i2s_dout = 0;
