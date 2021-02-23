@@ -21,41 +21,25 @@ module cpuif (
 	output wire cpu_irq,
 	output wire cpu_ta,
 
-	/* SDRAM bus */
+	output reg  req_valid,
+	input  wire req_ready,
+	output reg  [2:0] req_len,
+	output reg  [3:0] req_mask,
+	output reg  [31:0] req_addr,
+	output reg  req_we,
 
-	output wire sd_req_valid,
-	input  wire sd_req_ready,
-	output wire [3:0] sd_req_len,
-	output wire [31:0] sd_req_addr,
-	output wire sd_req_we,
+	output reg  dout_valid,
+	output reg  [31:0] dout,
 
-	output wire [31:0] sd_dout,
-	output wire [3:0] sd_dout_mask,
-	output wire sd_dout_valid,
-	input  wire sd_dout_ready,
-
-	input  wire [31:0] sd_din,
-	input  wire sd_din_valid,
-	output wire sd_din_ready,
+	input  wire din_valid,
+	input  wire [31:0] din,
+	output reg  din_ack,
 
 	/* Interrupt controller */
 
 	input  wire irq_req,
 	input  wire [7:0] irq_vec,
-	output wire irq_ack,
-
-	/* Wishbone bus */
-
-	output wire wb_cyc_o,
-	output wire wb_stb_o,
-	input  wire wb_ack_i,
-	output wire wb_we_o,
-	output wire [3:0] wb_sel_o,
-
-	output wire [29:0] wb_adr_o,
-
-	output wire [31:0] wb_dat_o,
-	input  wire [31:0] wb_dat_i
+	output wire irq_ack
 );
 
 assign cpu_irq  = ~irq_req;
@@ -115,22 +99,6 @@ parameter TT_DEF = 2'b00, TT_MOVE16 = 2'b01, TT_ALT = 2'b10, TT_ACK = 2'b11;
 
 reg [3:0] state  = IDLE;
 
-reg [31:0] dat_o;
-assign wb_dat_o  = dat_o;
-
-reg stb_o;
-assign wb_stb_o  = stb_o;
-assign wb_cyc_o  = stb_o;
-
-reg [31:0] adr_o;
-assign wb_adr_o  = adr_o[31:2];
-
-reg we_o;
-assign wb_we_o   = we_o;
-
-reg [3:0] sel_o;
-assign wb_sel_o  = sel_o;
-
 reg ta_o;
 assign cpu_ta    = ta_o;
 
@@ -159,47 +127,54 @@ assign cpu_oe    = oe_i;
 reg ack_i        = 0;
 assign irq_ack   = ack_i;
 
-reg [2:0] xfer_len;
-
 always @(posedge clk_i) begin
 	if(rst_fsm) begin
-		state <= IDLE;
-		stb_o <= 1'b0;
-		dir_i <= 1'b1;
-		oe_i  <= 1'b0;
-		ad_t  <= 1'b1;
-		ta_o  <= 1'b1;
-		ack_i <= 1'b0;
+		state      <= IDLE;
+		dir_i      <= 1'b1;
+		oe_i       <= 1'b0;
+		ad_t       <= 1'b1;
+		ta_o       <= 1'b1;
+		ack_i      <= 1'b0;
+		req_valid  <= 1'b0;
+		dout_valid <= 1'b0;
+		din_ack    <= 1'b0;
 	end else begin
+		req_valid  <= 1'b0;
+		dout_valid <= 1'b0;
+		din_ack    <= 1'b0;
+
 		case(state)
 			IDLE: if(phase == 0 && (~cpu_ts)) begin
 				if(cpu_tt == TT_DEF) begin
-					xfer_len <= 3'd1;
+					req_len <= 3'd1;
 					case(cpu_siz)
 						SIZ_BYTE: begin
 							case(addr_i[1:0])
 								2'b00:
-									sel_o <= 4'b1000;
+									req_mask <= 4'b1000;
 								2'b01:
-									sel_o <= 4'b0100;
+									req_mask <= 4'b0100;
 								2'b10:
-									sel_o <= 4'b0010;
+									req_mask <= 4'b0010;
 								2'b11:
-									sel_o <= 4'b0001;
+									req_mask <= 4'b0001;
 							endcase
 						end
 						SIZ_WORD: begin
-							sel_o <= (addr_i[1]) ? 4'b0011 : 4'b1100;
+							req_mask <= (addr_i[1]) ? 4'b0011 : 4'b1100;
 						end
 						SIZ_LONG: begin
-							sel_o    <= 4'b1111;
+							req_mask <= 4'b1111;
 						end
 						SIZ_LINE: begin
-							sel_o    <= 4'b1111;
-							xfer_len <= 3'd4;
+							req_mask <= 4'b1111;
+							req_len  <= 3'd4;
 						end
 					endcase
-					adr_o <= addr_i;
+					req_addr <= addr_i;
+					req_we <= !cpu_rw;
+					req_valid <= 1'b1;
+
 					state <= (cpu_rw) ? READ0 : WRITE0;
 				end else if(cpu_tt == TT_ACK) begin
 					dat_i <= {24'd0, irq_vec};
@@ -228,59 +203,62 @@ always @(posedge clk_i) begin
 				state <= IDLE;
 			end
 
-			READ0: if(phase == 1) begin
-				stb_o <= 1'b1;
-				we_o  <= 1'b0;
-				state <= READ1;
-			end
-			READ1: if(wb_ack_i && stb_o) begin
+			READ0: if(phase == 2) begin
 				dir_i <= 1'b0;
-				stb_o <= 1'b0;
-				we_o  <= 1'b0;
-				dat_i <= wb_dat_i;
+				if(din_valid) begin
+					dat_i   <= din;
+					din_ack <= 1'b1;
+					state   <= READ1;
+				end
+			end
+			READ1: if(phase == 1) begin
+				ad_t  <= 1'b0;
+				ta_o  <= 1'b0;
 				state <= READ2;
 			end
 			READ2: if(phase == 1) begin
-				ad_t  <= 1'b0;
-				ta_o  <= 1'b0;
-				state <= READ3;
-			end
-			READ3: if(phase == 1) begin
-				dir_i <= 1'b1;
-				ad_t  <= 1'b1;
-				ta_o  <= 1'b1;
-				if(xfer_len == 3'd1) begin
+				if(req_len == 3'd1) begin
 					state <= IDLE;
+					dir_i <= 1'b1;
+					ad_t  <= 1'b1;
+					ta_o  <= 1'b1;
 				end else begin
-					state      <= READ0;
-					xfer_len   <= xfer_len - 1;
-					adr_o[3:2] <= adr_o[3:2] + 1'b1;
+					req_len <= req_len - 1'b1;
+					if(din_valid) begin
+						dat_i   <= din;
+						din_ack <= 1'b1;
+						ta_o    <= 1'b0;
+					end else begin
+						state <= READ3;
+						ta_o  <= 1'b1;
+					end
+				end
+			end
+			READ3: if(phase == 2) begin
+				if(din_valid) begin
+					dat_i   <= din;
+					din_ack <= 1'b1;
+					ta_o    <= 1'b0;
+					state   <= READ2;
 				end
 			end
 
-			WRITE0: if(phase == 0) begin
-				dat_o <= cpu_ad;
-				stb_o <= 1'b1;
-				we_o  <= 1'b1;
+			WRITE0: if((phase == 1) && req_ready) begin
+				ta_o <= 1'b0;
 				state <= WRITE1;
 			end
-			WRITE1: if(wb_ack_i && stb_o) begin
-				stb_o <= 1'b0;
-				we_o  <= 1'b0;
-				state <= WRITE2;
+			WRITE1: if(phase == 0) begin
+				dout_valid <= 1'b1;
+				dout       <= cpu_ad;
+				state      <= WRITE2;
 			end
-			WRITE2: if(phase == 2) begin
-				ta_o  <= 1'b0;
-				state <= WRITE3;
-			end
-			WRITE3: if(phase == 1) begin
-				ta_o  <= 1'b1;
-				if(xfer_len == 3'd1) begin
+			WRITE2: if(phase == 1) begin
+				if(req_len == 3'd1) begin
+					ta_o  <= 1'b1;
 					state <= IDLE;
 				end else begin
-					state      <= WRITE0;
-					xfer_len   <= xfer_len - 1;
-					adr_o[3:2] <= adr_o[3:2] + 1'b1;
+					state   <= WRITE1;
+					req_len <= req_len - 1'b1;
 				end
 			end
 
