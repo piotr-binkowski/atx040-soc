@@ -91,6 +91,8 @@ ODDR2 oddr_cpu_bclk (
 	.CE(1'b1),
 	.D0(1'b1),
 	.D1(1'b0),
+	.R(1'b0),
+	.S(1'b0),
 	.Q(cpu_bclk)
 );
 
@@ -100,6 +102,8 @@ ODDR2 oddr_cpu_pclk (
 	.CE(1'b1),
 	.D0(1'b1),
 	.D1(1'b0),
+	.R(1'b0),
+	.S(1'b0),
 	.Q(cpu_pclk)
 );
 
@@ -109,6 +113,8 @@ ODDR2 oddr_sdram_clk (
 	.CE(1'b1),
 	.D0(1'b1),
 	.D1(1'b0),
+	.R(1'b0),
+	.S(1'b0),
 	.Q(sdram_clk)
 );
 
