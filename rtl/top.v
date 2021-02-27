@@ -59,7 +59,14 @@ module top(
 	output wire i2s_bclk,
 	/* PS2 */
 	input  wire ps2_dat,
-	input  wire ps2_clk
+	input  wire ps2_clk,
+	/* USB */
+	input  wire usb0_m,
+	input  wire usb0_p,
+	output wire usb0_pu,
+	input  wire usb1_m,
+	input  wire usb1_p,
+	output wire usb1_pu
 );
 
 wire clk24_buf;
@@ -118,7 +125,20 @@ ODDR2 oddr_sdram_clk (
 	.Q(sdram_clk)
 );
 
-wire rst_o = !cpu_rsto;
+wire reset_ext;
+wire sdram_init_done;
+
+assign usb0_pu = 1'b1;
+assign usb1_pu = 1'b1;
+
+reset_gen reset_gen_i (
+	.rstn(usb0_p),
+	.clk(sys_clk),
+	.reset(reset_ext)
+);
+
+wire sdram_rst_o = (!cpu_rsto) | reset_ext;
+wire rst_o = sdram_rst_o | (!sdram_init_done);
 
 wire cpu_req_valid;
 wire cpu_req_ready;
@@ -176,6 +196,60 @@ cpuif cpuif_i (
 	.irq_ack()
 );
 
+wire sdram_req_valid;
+wire sdram_req_ready;
+
+wire sdram_write_valid;
+
+wire sdram_read_ack;
+wire sdram_read_valid;
+wire [31:0] sdram_read_data;
+
+wire wb_req_valid;
+wire wb_req_ready;
+
+wire wb_write_valid;
+
+wire wb_read_ack;
+wire wb_read_valid;
+wire [31:0] wb_read_data;
+
+req_mux req_mux_i (
+	.clk(sys_clk),
+	.rst(rst_o),
+
+	.cpu_req_we(cpu_req_we),
+	.cpu_req_len(cpu_req_len),
+	.cpu_req_addr(cpu_req_addr),
+	.cpu_req_valid(cpu_req_valid),
+	.cpu_req_ready(cpu_req_ready),
+
+	.cpu_write_valid(cpu_write_valid),
+
+	.cpu_read_ack(cpu_read_ack),
+	.cpu_read_data(cpu_read_data),
+	.cpu_read_valid(cpu_read_valid),
+
+	.sdram_req_ready(sdram_req_ready),
+	.sdram_req_valid(sdram_req_valid),
+
+	.sdram_write_valid(sdram_write_valid),
+
+	.sdram_read_ack(sdram_read_ack),
+	.sdram_read_data(sdram_read_data),
+	.sdram_read_valid(sdram_read_valid),
+
+	.wb_req_ready(wb_req_ready),
+	.wb_req_valid(wb_req_valid),
+
+	.wb_write_valid(wb_write_valid),
+
+	.wb_read_ack(wb_read_ack),
+	.wb_read_data(wb_read_data),
+	.wb_read_valid(wb_read_valid)
+
+);
+
 wire cyc_o;
 wire stb_o;
 wire ack_i;
@@ -189,19 +263,19 @@ req_wb_bridge bridge_i (
 	.clk_i(sys_clk),
 	.rst_i(rst_o),
 
-	.req_valid(cpu_req_valid),
-	.req_ready(cpu_req_ready),
+	.req_valid(wb_req_valid),
+	.req_ready(wb_req_ready),
 	.req_len(cpu_req_len),
 	.req_mask(cpu_req_mask),
 	.req_addr(cpu_req_addr),
 	.req_we(cpu_req_we),
 
-	.write_valid(cpu_write_valid),
+	.write_valid(wb_write_valid),
 	.write_data(cpu_write_data),
 
-	.read_valid(cpu_read_valid),
-	.read_ack(cpu_read_ack),
-	.read_data(cpu_read_data),
+	.read_valid(wb_read_valid),
+	.read_ack(wb_read_ack),
+	.read_data(wb_read_data),
 
 	.wb_cyc_o(cyc_o),
 	.wb_stb_o(stb_o),
@@ -241,6 +315,9 @@ wb_dec dec_i (
 	.sdram_ack_i(sdram_ack),
 	.sdram_dat_i(sdram_dat)
 );
+
+assign sdram_ack = 1'b0;
+assign sdram_dat = 32'd0;
 
 wire uart_stb, uart_ack;
 wire [31:0] uart_dat;
@@ -408,17 +485,25 @@ wb_tim timer_i (
 	.dat_o(timer_dat)
 );
 
-wb_sdram sdram_i (
-	.clk_i(sys_clk),
-	.rst_i(rst_o),
-	.cyc_i(cyc_o),
-	.stb_i(sdram_stb),
-	.we_i(we_o),
-	.adr_i(adr_o),
-	.sel_i(sel_o),
-	.dat_i(dat_o),
-	.ack_o(sdram_ack),
-	.dat_o(sdram_dat),
+req_sdram sdram_i (
+	.clk(sys_clk),
+	.rst(sdram_rst_o),
+
+	.init_done(sdram_init_done),
+
+	.req_valid(sdram_req_valid),
+	.req_ready(sdram_req_ready),
+	.req_addr(cpu_req_addr),
+	.req_mask(cpu_req_mask),
+	.req_len(cpu_req_len),
+	.req_we(cpu_req_we),
+
+	.write_valid(sdram_write_valid),
+	.write_data(cpu_write_data),
+
+	.read_valid(sdram_read_valid),
+	.read_data(sdram_read_data),
+	.read_ack(sdram_read_ack),
 
 	.cke(sdram_cke),
 	.cs(sdram_cs),
