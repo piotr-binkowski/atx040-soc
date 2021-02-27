@@ -1,4 +1,4 @@
-module req_translator(
+module req_wb_bridge(
 	clk_i,
 	rst_i,
 
@@ -10,12 +10,12 @@ module req_translator(
 	req_len,
 	req_we,
 
-	din_valid,
-	din,
+	write_valid,
+	write_data,
 
-	dout_valid,
-	dout_ack,
-	dout,
+	read_valid,
+	read_data,
+	read_ack,
 
 	wb_cyc_o,
 	wb_stb_o,
@@ -39,17 +39,17 @@ input rst_i;
 input  req_valid;
 output req_ready;
 
-(* keep = "true" *) input req_we;
-(* keep = "true" *) input [2:0] req_len;
-(* keep = "true" *) input [AW-1:0] req_addr;
-(* keep = "true" *) input [COLS-1:0] req_mask;
+input req_we;
+input [2:0] req_len;
+input [AW-1:0] req_addr;
+input [COLS-1:0] req_mask;
 
-input din_valid;
-input [DW-1:0] din;
+input write_valid;
+input [DW-1:0] write_data;
 
-output dout_valid;
-input  dout_ack;
-output [DW-1:0] dout;
+output read_valid;
+output [DW-1:0] read_data;
+input  read_ack;
 
 output wb_cyc_o;
 output wb_stb_o;
@@ -73,13 +73,12 @@ assign wb_sel_o = sel_i;
 reg [AW-3:0] adr_i;
 assign wb_adr_o = adr_i;
 
-wire dout_fifo_full;
-wire dout_fifo_empty;
+wire read_fifo_full;
+wire read_fifo_empty;
 
-assign dout_valid = !dout_fifo_empty;
+assign read_valid = !read_fifo_empty;
 
-wire din_fifo_full;
-wire din_fifo_empty;
+wire write_fifo_empty;
 
 wire req_fifo_rd;
 wire [39:0] req_fifo_out;
@@ -121,7 +120,7 @@ always @(posedge clk_i) begin
 				we_i  <= req_we_i;
 				adr_i <= req_addr_i[31:2];
 				sel_i <= req_mask_i;
-				stb_i <= (!dout_fifo_full & !req_we_i) | (!din_fifo_empty & req_we_i);
+				stb_i <= (!read_fifo_full & !req_we_i) | (!write_fifo_empty & req_we_i);
 
 				if (wb_stb_o && wb_ack_i) begin
 					stb_i           <= 1'b0;
@@ -157,29 +156,29 @@ fifo #(
 fifo #(
 	.SIZE(FIFO_DEPTH),
 	.DW(DW)
-) fifo_din (
+) fifo_write (
 	.clk(clk_i),
 	.rst(rst_i),
-	.wr(din_valid),
-	.wdata(din),
+	.wr(write_valid),
+	.wdata(write_data),
 	.rd(wb_ack_i & wb_stb_o & wb_we_o),
 	.rdata(wb_dat_o),
-	.empty(din_fifo_empty),
-	.full(din_fifo_full)
+	.empty(write_fifo_empty),
+	.full()
 );
 
 fifo #(
 	.SIZE(FIFO_DEPTH),
 	.DW(DW)
-) fifo_dout (
+) fifo_read (
 	.clk(clk_i),
 	.rst(rst_i),
 	.wr(wb_ack_i & wb_stb_o & !wb_we_o),
 	.wdata(wb_dat_i),
-	.rd(dout_ack),
-	.rdata(dout),
-	.empty(dout_fifo_empty),
-	.full(dout_fifo_full)
+	.rd(read_ack),
+	.rdata(read_data),
+	.empty(read_fifo_empty),
+	.full(read_fifo_full)
 );
 
 endmodule

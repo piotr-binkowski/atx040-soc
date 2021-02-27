@@ -120,20 +120,20 @@ ODDR2 oddr_sdram_clk (
 
 wire rst_o = !cpu_rsto;
 
-wire req_valid;
-wire req_ready;
+wire cpu_req_valid;
+wire cpu_req_ready;
 
-wire req_we;
-wire [2:0] req_len;
-wire [3:0] req_mask;
-wire [31:0] req_addr;
+wire cpu_req_we;
+wire [2:0] cpu_req_len;
+wire [3:0] cpu_req_mask;
+wire [31:0] cpu_req_addr;
 
-wire dout_valid;
-wire [31:0] dout;
+wire cpu_write_valid;
+wire [31:0] cpu_write_data;
 
-wire din_valid;
-wire [31:0] din;
-wire din_ack;
+wire cpu_read_valid;
+wire [31:0] cpu_read_data;
+wire cpu_read_ack;
 
 cpuif cpuif_i (
 	.clk_i(sys_clk),
@@ -157,19 +157,19 @@ cpuif cpuif_i (
 	.cpu_irq(cpu_irq),
 	.cpu_ta(cpu_ta),
 
-	.req_valid(req_valid),
-	.req_ready(req_ready),
-	.req_len(req_len),
-	.req_mask(req_mask),
-	.req_addr(req_addr),
-	.req_we(req_we),
+	.req_valid(cpu_req_valid),
+	.req_ready(cpu_req_ready),
+	.req_mask(cpu_req_mask),
+	.req_addr(cpu_req_addr),
+	.req_len(cpu_req_len),
+	.req_we(cpu_req_we),
 
-	.dout_valid(dout_valid),
-	.dout(dout),
+	.write_valid(cpu_write_valid),
+	.write_data(cpu_write_data),
 
-	.din_valid(din_valid),
-	.din(din),
-	.din_ack(din_ack),
+	.read_valid(cpu_read_valid),
+	.read_data(cpu_read_data),
+	.read_ack(cpu_read_ack),
 
 	.irq_req(1'b0),
 	.irq_vec(8'd25),
@@ -185,23 +185,23 @@ wire [29:0] adr_o;
 wire [31:0] dat_o;
 wire [31:0] dat_i;
 
-req_translator translator_i (
+req_wb_bridge bridge_i (
 	.clk_i(sys_clk),
 	.rst_i(rst_o),
 
-	.req_valid(req_valid),
-	.req_ready(req_ready),
-	.req_len(req_len),
-	.req_mask(req_mask),
-	.req_addr(req_addr),
-	.req_we(req_we),
+	.req_valid(cpu_req_valid),
+	.req_ready(cpu_req_ready),
+	.req_len(cpu_req_len),
+	.req_mask(cpu_req_mask),
+	.req_addr(cpu_req_addr),
+	.req_we(cpu_req_we),
 
-	.din_valid(dout_valid),
-	.din(dout),
+	.write_valid(cpu_write_valid),
+	.write_data(cpu_write_data),
 
-	.dout_valid(din_valid),
-	.dout_ack(din_ack),
-	.dout(din),
+	.read_valid(cpu_read_valid),
+	.read_ack(cpu_read_ack),
+	.read_data(cpu_read_data),
 
 	.wb_cyc_o(cyc_o),
 	.wb_stb_o(stb_o),

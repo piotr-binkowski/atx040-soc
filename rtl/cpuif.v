@@ -28,12 +28,12 @@ module cpuif (
 	output reg  [31:0] req_addr,
 	output reg  req_we,
 
-	output reg  dout_valid,
-	output reg  [31:0] dout,
+	output reg  write_valid,
+	output reg  [31:0] write_data,
 
-	input  wire din_valid,
-	input  wire [31:0] din,
-	output reg  din_ack,
+	input  wire read_valid,
+	input  wire [31:0] read_data,
+	output reg  read_ack,
 
 	/* Interrupt controller */
 
@@ -134,20 +134,20 @@ wire force_rom = (acc_cnt < 2'b10);
 
 always @(posedge clk_i) begin
 	if(rst_fsm) begin
-		state      <= IDLE;
-		dir_i      <= 1'b1;
-		oe_i       <= 1'b0;
-		ad_t       <= 1'b1;
-		ta_o       <= 1'b1;
-		ack_i      <= 1'b0;
-		req_valid  <= 1'b0;
-		dout_valid <= 1'b0;
-		din_ack    <= 1'b0;
-		acc_cnt    <= 2'b00;
+		state       <= IDLE;
+		dir_i       <= 1'b1;
+		oe_i        <= 1'b0;
+		ad_t        <= 1'b1;
+		ta_o        <= 1'b1;
+		ack_i       <= 1'b0;
+		req_valid   <= 1'b0;
+		write_valid <= 1'b0;
+		read_ack    <= 1'b0;
+		acc_cnt     <= 2'b00;
 	end else begin
-		req_valid  <= 1'b0;
-		dout_valid <= 1'b0;
-		din_ack    <= 1'b0;
+		req_valid   <= 1'b0;
+		write_valid <= 1'b0;
+		read_ack    <= 1'b0;
 
 		case(state)
 			IDLE: if(phase == 0 && (~cpu_ts)) begin
@@ -216,10 +216,10 @@ always @(posedge clk_i) begin
 
 			READ0: if(phase == 2) begin
 				dir_i <= 1'b0;
-				if(din_valid) begin
-					dat_i   <= din;
-					din_ack <= 1'b1;
-					state   <= READ1;
+				if(read_valid) begin
+					dat_i    <= read_data;
+					read_ack <= 1'b1;
+					state    <= READ1;
 				end
 			end
 			READ1: if(phase == 1) begin
@@ -235,10 +235,10 @@ always @(posedge clk_i) begin
 					ta_o  <= 1'b1;
 				end else begin
 					req_len <= req_len - 1'b1;
-					if(din_valid) begin
-						dat_i   <= din;
-						din_ack <= 1'b1;
-						ta_o    <= 1'b0;
+					if(read_valid) begin
+						dat_i    <= read_data;
+						read_ack <= 1'b1;
+						ta_o     <= 1'b0;
 					end else begin
 						state <= READ3;
 						ta_o  <= 1'b1;
@@ -246,11 +246,11 @@ always @(posedge clk_i) begin
 				end
 			end
 			READ3: if(phase == 2) begin
-				if(din_valid) begin
-					dat_i   <= din;
-					din_ack <= 1'b1;
-					ta_o    <= 1'b0;
-					state   <= READ2;
+				if(read_valid) begin
+					dat_i    <= read_data;
+					read_ack <= 1'b1;
+					ta_o     <= 1'b0;
+					state    <= READ2;
 				end
 			end
 
@@ -259,9 +259,9 @@ always @(posedge clk_i) begin
 				state <= WRITE1;
 			end
 			WRITE1: if(phase == 0) begin
-				dout_valid <= 1'b1;
-				dout       <= cpu_ad;
-				state      <= WRITE2;
+				write_valid <= 1'b1;
+				write_data  <= cpu_ad;
+				state       <= WRITE2;
 			end
 			WRITE2: if(phase == 1) begin
 				if(req_len == 3'd1) begin
