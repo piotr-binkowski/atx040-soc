@@ -42,6 +42,8 @@ module cpuif (
 	output wire irq_ack
 );
 
+parameter ROM_OFF = 16'h4000;
+
 assign cpu_irq  = ~irq_req;
 
 /* Phase detect */
@@ -127,6 +129,9 @@ assign cpu_oe    = oe_i;
 reg ack_i        = 0;
 assign irq_ack   = ack_i;
 
+reg [1:0] acc_cnt = 2'b00;
+wire force_rom = (acc_cnt < 2'b10);
+
 always @(posedge clk_i) begin
 	if(rst_fsm) begin
 		state      <= IDLE;
@@ -138,6 +143,7 @@ always @(posedge clk_i) begin
 		req_valid  <= 1'b0;
 		dout_valid <= 1'b0;
 		din_ack    <= 1'b0;
+		acc_cnt    <= 2'b00;
 	end else begin
 		req_valid  <= 1'b0;
 		dout_valid <= 1'b0;
@@ -171,9 +177,14 @@ always @(posedge clk_i) begin
 							req_len  <= 3'd4;
 						end
 					endcase
-					req_addr <= addr_i;
-					req_we <= !cpu_rw;
+					req_addr  <= addr_i;
+					req_we    <= !cpu_rw;
 					req_valid <= 1'b1;
+
+					if (force_rom) begin
+						req_addr <= {ROM_OFF, addr_i[15:0]};
+						acc_cnt  <= acc_cnt + 1'b1;
+					end
 
 					state <= (cpu_rw) ? READ0 : WRITE0;
 				end else if(cpu_tt == TT_ACK) begin

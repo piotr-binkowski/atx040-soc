@@ -39,15 +39,6 @@ output reg sdram_stb_o;
 input sdram_ack_i;
 input [DW-1:0] sdram_dat_i;
 
-reg [1:0] acc_cnt = 2'b00;
-wire force_rom = (acc_cnt < 2'b10); // First two accesses must go to ROM
-
-always @(posedge clk_i)
-	if (rst_i)
-		acc_cnt <= 2'b00;
-	else if (ack_o && (acc_cnt < 2'b10))
-		acc_cnt <= acc_cnt + 1'b1;
-
 always @(*) begin
 	ack_o        = 0;
 	dat_o        = 0;
@@ -55,34 +46,28 @@ always @(*) begin
 	ram_stb_o    = 0;
 	periph_stb_o = 0;
 	sdram_stb_o  = 0;
-	if (force_rom) begin
-		ack_o = rom_ack_i;
-		dat_o = rom_dat_i;
-		rom_stb_o = stb_i;
-	end else begin
-		case(adr_i[AW-1:AW-2])
-			SDRAM_ADDR: begin
-				ack_o = sdram_ack_i;
-				dat_o = sdram_dat_i;
-				sdram_stb_o = stb_i;
-			end
-			ROM_ADDR: begin
-				ack_o = rom_ack_i;
-				dat_o = rom_dat_i;
-				rom_stb_o = stb_i;
-			end
-			RAM_ADDR: begin
-				ack_o = ram_ack_i;
-				dat_o = ram_dat_i;
-				ram_stb_o = stb_i;
-			end
-			PERIPH_ADDR: begin
-				ack_o = periph_ack_i;
-				dat_o = periph_dat_i;
-				periph_stb_o = stb_i;
-			end
-		endcase
-	end
+	case(adr_i[AW-1:AW-2])
+		SDRAM_ADDR: begin
+			ack_o = sdram_ack_i;
+			dat_o = sdram_dat_i;
+			sdram_stb_o = stb_i;
+		end
+		ROM_ADDR: begin
+			ack_o = rom_ack_i;
+			dat_o = rom_dat_i;
+			rom_stb_o = stb_i;
+		end
+		RAM_ADDR: begin
+			ack_o = ram_ack_i;
+			dat_o = ram_dat_i;
+			ram_stb_o = stb_i;
+		end
+		PERIPH_ADDR: begin
+			ack_o = periph_ack_i;
+			dat_o = periph_dat_i;
+			periph_stb_o = stb_i;
+		end
+	endcase
 end
 
 endmodule
