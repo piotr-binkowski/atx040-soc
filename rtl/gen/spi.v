@@ -1,4 +1,4 @@
-module spi(clk, rst, start, done, dat_i, dat_o, sck, miso, mosi);
+module spi(clk, rst, start, busy, dat_i, dat_o, sck, miso, mosi);
 
 parameter DIV = 8;
 parameter CW = $clog2(DIV*8);
@@ -8,7 +8,7 @@ input  clk;
 input  rst;
 
 input  start;
-output reg done;
+output busy;
 
 input  [DW-1:0] dat_i;
 output [DW-1:0] dat_o;
@@ -30,17 +30,17 @@ parameter IDLE = 1'b0, BUSY = 1'b1;
 
 reg state = IDLE;
 
+assign busy = (state != IDLE);
+
 always @(posedge clk) begin
 	if (rst) begin
 		state <= IDLE;
 		cnt   <= 0;
 		sck   <= 1'b0;
-		done  <= 1'b0;
 		data  <= {8{1'b0}};
 	end else begin
 		case(state)
 			IDLE: begin
-				done <= 1'b0;
 				if(start) begin
 					data  <= dat_i;
 					state <= BUSY;
@@ -58,7 +58,6 @@ always @(posedge clk) begin
 				end
 				if(cnt == (DIV*DW)) begin
 					sck   <= 1'b0;
-					done  <= 1'b1;
 					state <= IDLE;
 				end
 			end

@@ -36,7 +36,7 @@ wire status_sel;
 wire [7:0] dat_o_mux;
 assign dat_o = {dat_o_mux, 24'd0};
 
-wire spi_done;
+wire spi_busy;
 wire [7:0] spi_dat_o;
 wire spi_start;
 
@@ -47,7 +47,7 @@ spi spi_i (
 	.clk(clk_i),
 	.rst(rst_i),
 	.start(dat_we),
-	.done(spi_done),
+	.busy(spi_busy),
 	.dat_i(dat_i[31:24]),
 	.dat_o(spi_dat_o),
 	.sck(sck),
@@ -58,7 +58,7 @@ spi spi_i (
 assign dat_we = (!status_sel) & ack_o & we_i;
 assign ctl_we = status_sel & ack_o & we_i;
 
-assign status_reg = {6'b000000, spi_done, ss};
+assign status_reg = {6'b000000, spi_busy, ss};
 assign dat_o_mux = (status_sel) ? status_reg : spi_dat_o;
 assign status_sel = adr_i[0];
 
