@@ -151,7 +151,7 @@ always @(posedge clk_i) begin
 
 		case(state)
 			IDLE: if(phase == 0 && (~cpu_ts)) begin
-				if(cpu_tt == TT_DEF) begin
+				if((cpu_tt == TT_DEF) || (cpu_tt == TT_MOVE16)) begin
 					req_len <= 3'd1;
 					case(cpu_siz)
 						SIZ_BYTE: begin
