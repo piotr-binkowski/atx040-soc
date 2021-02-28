@@ -155,6 +155,11 @@ wire cpu_read_valid;
 wire [31:0] cpu_read_data;
 wire cpu_read_ack;
 
+wire irq_req;
+wire [7:0] irq_vec;
+wire irq_ack;
+wire [6:0] irq;
+
 cpuif cpuif_i (
 	.clk_i(sys_clk),
 	.rst_i(rst_o),
@@ -191,9 +196,18 @@ cpuif cpuif_i (
 	.read_data(cpu_read_data),
 	.read_ack(cpu_read_ack),
 
-	.irq_req(1'b0),
-	.irq_vec(8'd25),
-	.irq_ack()
+	.irq_req(irq_req),
+	.irq_vec(irq_vec),
+	.irq_ack(irq_ack)
+);
+
+irqc irqc_i (
+	.clk(sys_clk),
+	.rst(rst_o),
+	.irq_in(irq),
+	.irq_req(irq_req),
+	.irq_vec(irq_vec),
+	.irq_ack(irq_ack)
 );
 
 wire sdram_req_valid;
@@ -385,12 +399,16 @@ wb_mem ram_i (
 	.dat_o(ram_dat)
 );
 
+wire uart_irq;
+
 wb_uart uart_i (
 	.clk_i(sys_clk),
 	.rst_i(rst_o),
 
 	.txd(uart_txd),
 	.rxd(uart_rxd),
+
+	.irq(uart_irq),
 
 	.cyc_i(cyc_o),
 	.stb_i(uart_stb),
@@ -516,7 +534,17 @@ req_sdram sdram_i (
 	.ba(sdram_ba)
 );
 
+wire systick_irq;
+
+systick systick_i (
+	.clk(sys_clk),
+	.rst(rst_o),
+	.irq(systick_irq)
+);
+
 assign eth_rst  = !rst_o;
+
+assign irq = {5'd0, systick_irq, uart_irq};
 
 /* Unused pins */
 

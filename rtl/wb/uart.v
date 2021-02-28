@@ -1,4 +1,4 @@
-module wb_uart(clk_i, rst_i, cyc_i, stb_i, adr_i, we_i, dat_i, sel_i, ack_o, dat_o, txd, rxd);
+module wb_uart(clk_i, rst_i, cyc_i, stb_i, adr_i, we_i, dat_i, sel_i, ack_o, dat_o, txd, rxd, irq);
 
 parameter  FIFO_DEPTH = 64;
 parameter  BAUD_DIV   = 861;
@@ -24,6 +24,9 @@ output reg ack_o;
 
 output txd;
 input rxd;
+output irq;
+
+reg irq_en = 1'b0;
 
 always @(posedge clk_i)
 	if(ack_o)
@@ -114,7 +117,15 @@ uart_tx #(
 	.txd(txd)
 );
 
-assign status_reg = {4'b0000, tx_full, tx_empty, rx_full, rx_empty};
+assign irq = !rx_empty & irq_en;
+
+always @(posedge clk_i)
+	if (rst_i)
+		irq_en <= 1'b0;
+	else if (ack_o & we_i & status_sel)
+		irq_en <= dat_i[28];
+
+assign status_reg = {3'b000, irq_en, tx_full, tx_empty, rx_full, rx_empty};
 assign dat_o_mux = (status_sel) ? status_reg : rx_dout;
 assign status_sel = adr_i[0];
 
