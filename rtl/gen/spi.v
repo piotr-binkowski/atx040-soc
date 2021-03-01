@@ -1,4 +1,4 @@
-module spi(clk, rst, start, busy, dat_i, dat_o, sck, miso, mosi);
+module spi(clk, rst, din, din_valid, din_ready, dout, dout_valid, dout_ready, sck, miso, mosi);
 
 parameter DIV = 8;
 parameter CW = $clog2(DIV*8);
@@ -7,11 +7,13 @@ parameter DW = 8;
 input  clk;
 input  rst;
 
-input  start;
-output busy;
+input  [DW-1:0] din;
+input  din_valid;
+output din_ready;
 
-input  [DW-1:0] dat_i;
-output [DW-1:0] dat_o;
+output [DW-1:0] dout;
+output dout_valid;
+input  dout_ready;
 
 output reg sck;
 input  miso;
@@ -19,8 +21,8 @@ output mosi;
 
 reg [DW-1:0] data;
 
-assign dat_o = data;
-assign mosi  = data[DW-1];
+assign dout = data;
+assign mosi = data[DW-1];
 
 reg miso_i;
 
@@ -29,20 +31,24 @@ reg [CW:0] cnt = 0;
 parameter IDLE = 1'b0, BUSY = 1'b1;
 
 reg state = IDLE;
+reg valid = 1'b0;
 
-assign busy = (state != IDLE);
+assign din_ready = dout_ready & (state == IDLE);
+assign dout_valid = valid;
 
 always @(posedge clk) begin
 	if (rst) begin
-		state <= IDLE;
 		cnt   <= 0;
 		sck   <= 1'b0;
+		state <= IDLE;
 		data  <= {8{1'b0}};
+		valid <= 1'b0;
 	end else begin
+		valid <= 1'b0;
 		case(state)
 			IDLE: begin
-				if(start) begin
-					data  <= dat_i;
+				if(din_ready & din_valid) begin
+					data  <= din;
 					state <= BUSY;
 					cnt   <= 0;
 				end
@@ -58,6 +64,7 @@ always @(posedge clk) begin
 				end
 				if(cnt == (DIV*DW)) begin
 					sck   <= 1'b0;
+					valid <= 1'b1;
 					state <= IDLE;
 				end
 			end
