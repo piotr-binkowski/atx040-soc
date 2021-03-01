@@ -1,5 +1,7 @@
 module wb_spi(clk_i, rst_i, cyc_i, stb_i, adr_i, we_i, dat_i, sel_i, ack_o, dat_o, sck, ss, miso, mosi);
 
+parameter  FIFO_DEPTH = 64;
+
 localparam AW   = 2;
 localparam DW   = 32;
 localparam COLS = DW/8;
@@ -36,22 +38,39 @@ wire status_sel;
 wire [7:0] dat_o_mux;
 assign dat_o = {dat_o_mux, 24'd0};
 
-wire dat_ready;
 wire [7:0] spi_dat_o;
-wire spi_start;
 
 wire dat_we;
 wire ctl_we;
 
+wire tx_read;
+wire [7:0] tx_dout;
+wire tx_empty;
+wire tx_full;
+
+fifo #(
+	.SIZE(FIFO_DEPTH),
+	.DW(8)
+) fifo_tx_i (
+	.clk(clk_i),
+	.rst(rst_i),
+	.wr(dat_we),
+	.wdata(dat_i[31:24]),
+	.rd(tx_read),
+	.rdata(tx_dout),
+	.empty(tx_empty),
+	.full(tx_full)
+);
+
 spi spi_i (
 	.clk(clk_i),
 	.rst(rst_i),
-	.din(dat_i[31:24]),
-	.din_valid(dat_we),
-	.din_ready(dat_ready),
+	.din(tx_dout),
+	.din_valid(!tx_empty),
 	.dout(spi_dat_o),
 	.dout_ready(1'b1),
 	.dout_valid(),
+	.din_ready(tx_read),
 	.sck(sck),
 	.miso(miso),
 	.mosi(mosi)
@@ -60,7 +79,7 @@ spi spi_i (
 assign dat_we = (!status_sel) & ack_o & we_i;
 assign ctl_we = status_sel & ack_o & we_i;
 
-assign status_reg = {6'b000000, !dat_ready, ss};
+assign status_reg = {6'b000000, !tx_read, ss};
 assign dat_o_mux = (status_sel) ? status_reg : spi_dat_o;
 assign status_sel = adr_i[0];
 
