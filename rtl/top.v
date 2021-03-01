@@ -544,7 +544,7 @@ systick systick_i (
 
 assign eth_rst  = !rst_o;
 
-assign irq = {5'd0, systick_irq, uart_irq};
+assign irq = {4'd0, !eth_int, systick_irq, uart_irq};
 
 /* Unused pins */
 
