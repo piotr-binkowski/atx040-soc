@@ -140,20 +140,20 @@ reset_gen reset_gen_i (
 wire sdram_rst_o = (!cpu_rsto) | reset_ext;
 wire rst_o = sdram_rst_o | (!sdram_init_done);
 
-wire cpu_req_valid;
-wire cpu_req_ready;
+(* keep = "true" *) wire cpu_req_valid;
+(* keep = "true" *) wire cpu_req_ready;
 
-wire cpu_req_we;
-wire [2:0] cpu_req_len;
-wire [3:0] cpu_req_mask;
-wire [31:0] cpu_req_addr;
+(* keep = "true" *) wire cpu_req_we;
+(* keep = "true" *) wire [2:0] cpu_req_len;
+(* keep = "true" *) wire [3:0] cpu_req_mask;
+(* keep = "true" *) wire [31:0] cpu_req_addr;
 
-wire cpu_write_valid;
-wire [31:0] cpu_write_data;
+(* keep = "true" *) wire cpu_write_valid;
+(* keep = "true" *) wire [31:0] cpu_write_data;
 
-wire cpu_read_valid;
-wire [31:0] cpu_read_data;
-wire cpu_read_ack;
+(* keep = "true" *) wire cpu_read_valid;
+(* keep = "true" *) wire [31:0] cpu_read_data;
+(* keep = "true" *) wire cpu_read_ack;
 
 wire irq_req;
 wire [7:0] irq_vec;
@@ -264,12 +264,12 @@ req_mux req_mux_i (
 
 );
 
-wire cyc_o;
-wire stb_o;
-wire ack_i;
-wire we_o;
-wire [3:0] sel_o;
-wire [29:0] adr_o;
+(* keep = "true" *) wire cyc_o;
+(* keep = "true" *) wire stb_o;
+(* keep = "true" *) wire ack_i;
+(* keep = "true" *) wire we_o;
+(* keep = "true" *) wire [3:0] sel_o;
+(* keep = "true" *) wire [29:0] adr_o;
 wire [31:0] dat_o;
 wire [31:0] dat_i;
 

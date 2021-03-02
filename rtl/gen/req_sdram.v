@@ -35,46 +35,13 @@ module req_sdram(
 localparam DW = 32;
 localparam FIFO_DEPTH = 8;
 
-/* Control channel */
-
-wire sdram_req_we;
-wire sdram_req_ready;
-wire sdram_req_valid;
-wire [3:0] sdram_req_len;
-wire [23:0] sdram_req_addr;
-
-wire req_fifo_full;
-wire req_fifo_empty;
-wire [39:0] req_fifo_out;
-
-assign sdram_req_valid = !req_fifo_empty;
-assign req_ready = !req_fifo_full;
-
-assign sdram_req_we   = req_fifo_out[39];
-assign sdram_req_addr = {req_fifo_out[24:2], 1'b0};
-assign sdram_req_len  = {req_fifo_out[38:36], 1'b0};
-
-fifo #(
-	.SIZE(FIFO_DEPTH),
-	.DW(40)
-) fifo_req (
-	.clk(clk),
-	.rst(rst),
-	.wr(req_ready & req_valid),
-	.wdata({req_we, req_len, req_mask, req_addr}),
-	.rd(sdram_req_ready & sdram_req_valid),
-	.rdata(req_fifo_out),
-	.empty(req_fifo_empty),
-	.full(req_fifo_full)
-);
-
 /* Write channel */
 
 reg [3:0] wr_mask;
 
 always @(posedge clk)
-	if (sdram_req_ready & sdram_req_valid)
-		wr_mask <= req_fifo_out[35:32];
+	if (req_valid)
+		wr_mask <= req_mask;
 
 reg wr_mux = 1'b0;
 
@@ -103,7 +70,6 @@ always @(posedge clk) begin
 	end
 end
 
-
 fifo #(
 	.SIZE(FIFO_DEPTH),
 	.DW(DW)
@@ -119,7 +85,6 @@ fifo #(
 );
 
 /* Read channel */
-
 
 reg rd_mux = 1'b0;
 reg [15:0] read_data_buf;
@@ -168,11 +133,11 @@ sdram sdram_i (
 
 	.init_done(init_done),
 
-	.req_ready(sdram_req_ready),
-	.req_valid(sdram_req_valid),
-	.req_len(sdram_req_len),
-	.req_addr(sdram_req_addr),
-	.req_we(sdram_req_we),
+	.req_ready(req_ready),
+	.req_valid(req_valid),
+	.req_len({req_len, 1'b0}),
+	.req_addr({req_addr[24:2], 1'b0}),
+	.req_we(req_we),
 
 	.din(sdram_write_data),
 	.din_valid(sdram_write_valid),

@@ -93,13 +93,13 @@ assign cpu_rsti = ~rst_cpu;
 
 /* Bus */
 
-parameter IDLE = 4'd0, IRQ0 = 4'd1, IRQ1 = 4'd2, IRQ2 = 4'd3, IRQ3 = 4'd4, READ0 = 4'd8, READ1 = 4'd9, READ2 = 4'd10, READ3 = 4'd11, WRITE0 = 4'd12, WRITE1 = 4'd13, WRITE2 = 4'd14, WRITE3 = 4'd15;
+parameter IDLE = 4'd0, IRQ0 = 4'd1, IRQ1 = 4'd2, IRQ2 = 4'd3, IRQ3 = 4'd4, WAIT = 4'd5, READ0 = 4'd8, READ1 = 4'd9, READ2 = 4'd10, READ3 = 4'd11, WRITE0 = 4'd12, WRITE1 = 4'd13, WRITE2 = 4'd14, WRITE3 = 4'd15;
 
 parameter SIZ_BYTE = 2'b01, SIZ_WORD = 2'b10, SIZ_LONG = 2'b00, SIZ_LINE = 2'b11;
 
 parameter TT_DEF = 2'b00, TT_MOVE16 = 2'b01, TT_ALT = 2'b10, TT_ACK = 2'b11;
 
-reg [3:0] state  = IDLE;
+(* keep = "true" *) reg [3:0] state  = IDLE;
 
 reg ta_o;
 assign cpu_ta    = ta_o;
@@ -145,7 +145,6 @@ always @(posedge clk_i) begin
 		read_ack    <= 1'b0;
 		acc_cnt     <= 2'b00;
 	end else begin
-		req_valid   <= 1'b0;
 		write_valid <= 1'b0;
 		read_ack    <= 1'b0;
 
@@ -186,11 +185,20 @@ always @(posedge clk_i) begin
 						acc_cnt  <= acc_cnt + 1'b1;
 					end
 
-					state <= (cpu_rw) ? READ0 : WRITE0;
+					state <= WAIT;
+
 				end else if(cpu_tt == TT_ACK) begin
 					dat_i <= {24'd0, irq_vec};
 					ack_i <= 1'b1;
 					state <= IRQ0;
+				end
+			end
+
+			WAIT: begin
+				req_valid <= 1'b1;
+				if(req_ready & req_valid) begin
+					req_valid <= 1'b0;
+					state <= (cpu_rw) ? READ0 : WRITE0;
 				end
 			end
 
@@ -235,14 +243,8 @@ always @(posedge clk_i) begin
 					ta_o  <= 1'b1;
 				end else begin
 					req_len <= req_len - 1'b1;
-					if(read_valid) begin
-						dat_i    <= read_data;
-						read_ack <= 1'b1;
-						ta_o     <= 1'b0;
-					end else begin
-						state <= READ3;
-						ta_o  <= 1'b1;
-					end
+					state   <= READ3;
+					ta_o    <= 1'b1;
 				end
 			end
 			READ3: if(phase == 2) begin
@@ -254,7 +256,7 @@ always @(posedge clk_i) begin
 				end
 			end
 
-			WRITE0: if((phase == 1) && req_ready) begin
+			WRITE0: if(phase == 2) begin
 				ta_o <= 1'b0;
 				state <= WRITE1;
 			end
