@@ -41,6 +41,8 @@ assign dat_o = {dat_o_mux, 24'd0};
 wire [7:0] spi_dat_o;
 
 wire dat_we;
+wire dat_rd;
+
 wire ctl_we;
 
 wire tx_read;
@@ -62,24 +64,45 @@ fifo #(
 	.full(tx_full)
 );
 
+wire rx_write;
+wire [7:0] rx_din;
+wire rx_empty;
+wire rx_full;
+
+fifo #(
+	.SIZE(FIFO_DEPTH),
+	.DW(8)
+) fifo_rx_i (
+	.clk(clk_i),
+	.rst(rst_i),
+	.wr(rx_write),
+	.wdata(rx_din),
+	.rd(dat_rd),
+	.rdata(spi_dat_o),
+	.empty(rx_empty),
+	.full(rx_full)
+);
+
 spi spi_i (
 	.clk(clk_i),
 	.rst(rst_i),
 	.din(tx_dout),
 	.din_valid(!tx_empty),
-	.dout(spi_dat_o),
-	.dout_ready(1'b1),
-	.dout_valid(),
 	.din_ready(tx_read),
+	.dout(rx_din),
+	.dout_ready(!rx_full),
+	.dout_valid(rx_write),
 	.sck(sck),
 	.miso(miso),
 	.mosi(mosi)
 );
 
 assign dat_we = (!status_sel) & ack_o & we_i;
+assign dat_rd = (!status_sel) & ack_o & (!we_i);
+
 assign ctl_we = status_sel & ack_o & we_i;
 
-assign status_reg = {6'b000000, !tx_read, ss};
+assign status_reg = {6'b000000, rx_empty, ss};
 assign dat_o_mux = (status_sel) ? status_reg : spi_dat_o;
 assign status_sel = adr_i[0];
 
