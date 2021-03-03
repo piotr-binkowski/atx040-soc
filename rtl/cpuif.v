@@ -224,16 +224,16 @@ always @(posedge clk_i) begin
 
 			READ0: if(phase == 2) begin
 				dir_i <= 1'b0;
+				state <= READ1;
+			end
+			READ1: if(phase == 2) begin
 				if(read_valid) begin
 					dat_i    <= read_data;
 					read_ack <= 1'b1;
-					state    <= READ1;
+					ad_t     <= 1'b0;
+					ta_o     <= 1'b0;
+					state    <= READ2;
 				end
-			end
-			READ1: if(phase == 1) begin
-				ad_t  <= 1'b0;
-				ta_o  <= 1'b0;
-				state <= READ2;
 			end
 			READ2: if(phase == 1) begin
 				if(req_len == 3'd1) begin
@@ -243,16 +243,8 @@ always @(posedge clk_i) begin
 					ta_o  <= 1'b1;
 				end else begin
 					req_len <= req_len - 1'b1;
-					state   <= READ3;
+					state   <= READ1;
 					ta_o    <= 1'b1;
-				end
-			end
-			READ3: if(phase == 2) begin
-				if(read_valid) begin
-					dat_i    <= read_data;
-					read_ack <= 1'b1;
-					ta_o     <= 1'b0;
-					state    <= READ2;
 				end
 			end
 
