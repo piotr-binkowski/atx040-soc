@@ -1,6 +1,6 @@
 module wb_spi(clk_i, rst_i, cyc_i, stb_i, adr_i, we_i, dat_i, sel_i, ack_o, dat_o, sck, ss, miso, mosi);
 
-parameter  FIFO_DEPTH = 64;
+parameter  FIFO_DEPTH = 1024;
 
 localparam AW   = 2;
 localparam DW   = 32;
