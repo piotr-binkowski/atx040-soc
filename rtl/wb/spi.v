@@ -102,7 +102,7 @@ assign dat_rd = (!status_sel) & ack_o & (!we_i);
 
 assign ctl_we = status_sel & ack_o & we_i;
 
-assign status_reg = {6'b000000, rx_empty, ss};
+assign status_reg = {5'b00000, tx_full, rx_empty, ss};
 assign dat_o_mux = (status_sel) ? status_reg : spi_dat_o;
 assign status_sel = adr_i[0];
 

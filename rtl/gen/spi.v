@@ -28,9 +28,9 @@ reg miso_i;
 
 reg [CW:0] cnt = 0;
 
-parameter IDLE = 1'b0, BUSY = 1'b1;
+parameter IDLE = 2'd0, BUSY = 2'd1, ACK = 2'd2;
 
-reg state = IDLE;
+reg [1:0] state = IDLE;
 reg valid = 1'b0;
 
 assign din_ready = dout_ready & (state == IDLE);
@@ -44,7 +44,6 @@ always @(posedge clk) begin
 		data  <= {8{1'b0}};
 		valid <= 1'b0;
 	end else begin
-		valid <= 1'b0;
 		case(state)
 			IDLE: begin
 				if(din_ready & din_valid) begin
@@ -65,6 +64,13 @@ always @(posedge clk) begin
 				if(cnt == (DIV*DW)) begin
 					sck   <= 1'b0;
 					valid <= 1'b1;
+					state <= ACK;
+				end
+			end
+			ACK: begin
+				valid <= 1'b1;
+				if (dout_valid & dout_ready) begin
+					valid <= 1'b0;
 					state <= IDLE;
 				end
 			end
