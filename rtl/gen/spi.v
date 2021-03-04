@@ -1,11 +1,13 @@
-module spi(clk, rst, din, din_valid, din_ready, dout, dout_valid, dout_ready, sck, miso, mosi);
+module spi(clk, rst, quad, din, din_valid, din_ready, dout, dout_valid, dout_ready, sck, miso, mosi);
 
 parameter DIV = 8;
-parameter CW = $clog2(DIV*8);
-parameter DW = 8;
+parameter DW = 32;
+parameter CW = $clog2(DIV*DW);
 
 input  clk;
 input  rst;
+
+input  quad;
 
 input  [DW-1:0] din;
 input  din_valid;
@@ -28,28 +30,35 @@ reg miso_i;
 
 reg [CW:0] cnt = 0;
 
+wire [CW:0] tgt;
+
 parameter IDLE = 2'd0, BUSY = 2'd1, ACK = 2'd2;
 
 reg [1:0] state = IDLE;
-reg valid = 1'b0;
+reg valid  = 1'b0;
+reg quad_i = 1'b0;
 
 assign din_ready = dout_ready & (state == IDLE);
 assign dout_valid = valid;
 
+assign tgt = (quad_i) ? (DIV*32) : (DIV*8);
+
 always @(posedge clk) begin
 	if (rst) begin
-		cnt   <= 0;
-		sck   <= 1'b0;
-		state <= IDLE;
-		data  <= {8{1'b0}};
-		valid <= 1'b0;
+		cnt    <= 0;
+		sck    <= 1'b0;
+		state  <= IDLE;
+		data   <= {(DW){1'b0}};
+		valid  <= 1'b0;
+		quad_i <= 1'b0;
 	end else begin
 		case(state)
 			IDLE: begin
 				if(din_ready & din_valid) begin
-					data  <= din;
-					state <= BUSY;
-					cnt   <= 0;
+					cnt    <= 0;
+					data   <= din;
+					state  <= BUSY;
+					quad_i <= quad;
 				end
 			end
 			BUSY: begin
@@ -58,10 +67,10 @@ always @(posedge clk) begin
 					sck    <= 1'b1;
 					miso_i <= miso;
 				end else if ((cnt % DIV) == (DIV/2)) begin
-					sck <= 1'b0;
+					sck  <= 1'b0;
 					data <= {data[DW-2:0], miso_i};
 				end
-				if(cnt == (DIV*DW)) begin
+				if(cnt == tgt) begin
 					sck   <= 1'b0;
 					valid <= 1'b1;
 					state <= ACK;

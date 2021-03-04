@@ -4,7 +4,6 @@ parameter SIZE = 1024;
 parameter DW   = 32;
 
 parameter AW   = $clog2(SIZE);
-localparam COLS = DW/8;
 
 input clk;
 input rst;
@@ -60,10 +59,10 @@ end
 
 bram #(
 	.SIZE(SIZE),
-	.COLS(COLS)
+	.DW(DW)
 ) bram_i (
 	.clk(clk),
-	.wstrb({(COLS){wr_i}}),
+	.wstrb(wr_i),
 	.waddr(wptr[AW-1:0]),
 	.wdata(wdata),
 	.raddr(rptr_mem[AW-1:0]),

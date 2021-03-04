@@ -27,7 +27,7 @@ wire [COLS-1:0] wstrb;
 
 assign wstrb = (ROM) ? 0 : (sel_i & {(COLS){we_i}} & {(COLS){ack_o}});
 
-bram #(
+bram_wsel #(
 	.INIT(INIT),
 	.SIZE(SIZE),
 	.COLS(COLS)
