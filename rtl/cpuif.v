@@ -4,6 +4,8 @@ module cpuif (
 
 	input  wire bclk,
 
+	input  wire cdis_ext,
+
 	inout  wire [31:0] cpu_ad,
 
 	output wire cpu_dir,
@@ -87,7 +89,12 @@ end
 assign rst_cpu  = rst_cnt > (256)  ? 1'b0 : 1'b1;
 assign rst_fsm  = rst_cnt > (256+512+8) ? 1'b0 : 1'b1;
 
-assign cpu_cdis = ~rst_fsm;
+reg [3:0] cdis_ext_sync = 4'b1111;
+
+always @(posedge bclk)
+	cdis_ext_sync <= {cdis_ext_sync[2:0], cdis_ext};
+
+assign cpu_cdis = !(rst_fsm | cdis_ext_sync[3]);
 
 assign cpu_rsti = ~rst_cpu;
 

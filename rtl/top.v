@@ -166,6 +166,8 @@ cpuif cpuif_i (
 
 	.bclk(cpu_bclk_i),
 
+	.cdis_ext(!usb1_pu),
+
 	.cpu_ad(cpu_ad),
 	.cpu_dir(cpu_dir),
 	.cpu_oe(cpu_oe),
