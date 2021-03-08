@@ -195,7 +195,6 @@ always @(posedge clk_i) begin
 					state <= WAIT;
 
 				end else if(cpu_tt == TT_ACK) begin
-					dat_i <= {24'd0, irq_vec};
 					ack_i <= 1'b1;
 					state <= IRQ0;
 				end
@@ -209,11 +208,12 @@ always @(posedge clk_i) begin
 				end
 			end
 
-			IRQ0: if(phase == 1) begin
+			IRQ0: if(irq_req & irq_ack) begin
 				ack_i <= 1'b0;
+				dat_i <= {24'd0, irq_vec};
 				state <= IRQ1;
 			end
-			IRQ1: if(phase == 2) begin
+			IRQ1: begin
 				dir_i <= 1'b0;
 				state <= IRQ2;
 			end

@@ -160,7 +160,7 @@ wire cpu_read_ack;
 wire irq_req;
 wire [7:0] irq_vec;
 wire irq_ack;
-wire [6:0] irq;
+wire [31:0] irq;
 
 cpuif cpuif_i (
 	.clk_i(sys_clk),
@@ -200,15 +200,6 @@ cpuif cpuif_i (
 	.read_data(cpu_read_data),
 	.read_ack(cpu_read_ack),
 
-	.irq_req(irq_req),
-	.irq_vec(irq_vec),
-	.irq_ack(irq_ack)
-);
-
-irqc irqc_i (
-	.clk(sys_clk),
-	.rst(rst_o),
-	.irq_in(irq),
 	.irq_req(irq_req),
 	.irq_vec(irq_vec),
 	.irq_ack(irq_ack)
@@ -342,9 +333,9 @@ wb_arb #(
 	.adr_i(adr_o[27:24]),
 	.ack_o(periph_ack),
 	.dat_o(periph_dat),
-	.slv_stb_o({eth_stb, sd_stb, timer_stb, flash_stb, uart_stb}),
-	.slv_ack_i({eth_ack, sd_ack, timer_ack, flash_ack, uart_ack}),
-	.slv_dat_i({eth_dat, sd_dat, timer_dat, flash_dat, uart_dat})
+	.slv_stb_o({irqc_stb, eth_stb, sd_stb, timer_stb, flash_stb, uart_stb}),
+	.slv_ack_i({irqc_ack, eth_ack, sd_ack, timer_ack, flash_ack, uart_ack}),
+	.slv_dat_i({irqc_dat, eth_dat, sd_dat, timer_dat, flash_dat, uart_dat})
 );
 
 wb_mem #(
@@ -491,6 +482,28 @@ wb_tim timer_i (
 	.dat_o(timer_dat)
 );
 
+irqc irqc_i (
+	.clk_i(sys_clk),
+	.rst_i(rst_o),
+
+	.cyc_i(cyc_o),
+	.stb_i(irqc_stb),
+
+	.we_i(we_o),
+
+	.sel_i(sel_o),
+	.dat_i(dat_o),
+
+	.ack_o(irqc_ack),
+	.dat_o(irqc_dat),
+
+	.irq_in(irq),
+	.irq_req(irq_req),
+	.irq_vec(irq_vec),
+	.irq_ack(irq_ack)
+);
+
+
 req_sdram sdram_i (
 	.clk(sys_clk),
 	.rst(sdram_rst_o),
@@ -532,7 +545,7 @@ systick systick_i (
 
 assign eth_rst  = !rst_o;
 
-assign irq = {4'd0, !eth_int, systick_irq, uart_irq};
+assign irq = {29'd0, !eth_int, systick_irq, uart_irq};
 
 /* Unused pins */
 
