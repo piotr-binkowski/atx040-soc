@@ -40,12 +40,12 @@ wire dat_rd;
 
 wire ctl_we;
 
-(* keep = "true" *) wire tx_read;
-(* keep = "true" *) wire [DW-1:0] tx_dout;
-(* keep = "true" *) wire tx_empty;
-(* keep = "true" *) wire tx_full;
-(* keep = "true" *) wire tx_quad;
-(* keep = "true" *) wire quad;
+wire tx_read;
+wire [DW-1:0] tx_dout;
+wire tx_empty;
+wire tx_full;
+wire tx_quad;
+wire quad;
 
 assign quad = (sel_i == 4'b1111);
 
@@ -63,11 +63,11 @@ fifo #(
 	.full(tx_full)
 );
 
-(* keep = "true" *) wire rx_write;
-(* keep = "true" *) wire [DW-1:0] rx_din;
-(* keep = "true" *) wire [DW-1:0] rx_rdata;
-(* keep = "true" *) wire rx_empty;
-(* keep = "true" *) wire rx_full;
+wire rx_write;
+wire [DW-1:0] rx_din;
+wire [DW-1:0] rx_rdata;
+wire rx_empty;
+wire rx_full;
 
 fifo #(
 	.SIZE(FIFO_DEPTH),

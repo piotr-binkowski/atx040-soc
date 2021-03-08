@@ -76,8 +76,6 @@ wire cpu_pclk_i;
 wire sys_clk;
 wire sdram_clk_i;
 
-wire locked;
-
 IBUFG clk24_ibuf (
 	.I(clk24),
 	.O(clk24_buf)
@@ -85,11 +83,15 @@ IBUFG clk24_ibuf (
 
 clkgen clkgen_i (
 	.clk24_ref(clk24_buf),
-	.locked(locked),
 	.cpu_bclk(cpu_bclk_i),
 	.cpu_pclk(cpu_pclk_i),
 	.sys_clk(sys_clk),
-	.sdram_clk(sdram_clk_i)
+	.sdram_clk(sdram_clk_i),
+	/* Unused */
+	.locked(),
+	.clk24(),
+	.clk25(),
+	.clk48()
 );
 
 ODDR2 oddr_cpu_bclk (
@@ -140,20 +142,20 @@ reset_gen reset_gen_i (
 wire sdram_rst_o = (!cpu_rsto) | reset_ext;
 wire rst_o = sdram_rst_o | (!sdram_init_done);
 
-(* keep = "true" *) wire cpu_req_valid;
-(* keep = "true" *) wire cpu_req_ready;
+wire cpu_req_valid;
+wire cpu_req_ready;
 
-(* keep = "true" *) wire cpu_req_we;
-(* keep = "true" *) wire [2:0] cpu_req_len;
-(* keep = "true" *) wire [3:0] cpu_req_mask;
-(* keep = "true" *) wire [31:0] cpu_req_addr;
+wire cpu_req_we;
+wire [2:0] cpu_req_len;
+wire [3:0] cpu_req_mask;
+wire [31:0] cpu_req_addr;
 
-(* keep = "true" *) wire cpu_write_valid;
-(* keep = "true" *) wire [31:0] cpu_write_data;
+wire cpu_write_valid;
+wire [31:0] cpu_write_data;
 
-(* keep = "true" *) wire cpu_read_valid;
-(* keep = "true" *) wire [31:0] cpu_read_data;
-(* keep = "true" *) wire cpu_read_ack;
+wire cpu_read_valid;
+wire [31:0] cpu_read_data;
+wire cpu_read_ack;
 
 wire irq_req;
 wire [7:0] irq_vec;
@@ -231,12 +233,8 @@ wire wb_read_valid;
 wire [31:0] wb_read_data;
 
 req_mux req_mux_i (
-	.clk(sys_clk),
-	.rst(rst_o),
-
-	.cpu_req_we(cpu_req_we),
 	.cpu_req_len(cpu_req_len),
-	.cpu_req_addr(cpu_req_addr),
+	.cpu_req_addr(cpu_req_addr[31:30]),
 	.cpu_req_valid(cpu_req_valid),
 	.cpu_req_ready(cpu_req_ready),
 
@@ -263,15 +261,14 @@ req_mux req_mux_i (
 	.wb_read_ack(wb_read_ack),
 	.wb_read_data(wb_read_data),
 	.wb_read_valid(wb_read_valid)
-
 );
 
-(* keep = "true" *) wire cyc_o;
-(* keep = "true" *) wire stb_o;
-(* keep = "true" *) wire ack_i;
-(* keep = "true" *) wire we_o;
-(* keep = "true" *) wire [3:0] sel_o;
-(* keep = "true" *) wire [29:0] adr_o;
+wire cyc_o;
+wire stb_o;
+wire ack_i;
+wire we_o;
+wire [3:0] sel_o;
+wire [29:0] adr_o;
 wire [31:0] dat_o;
 wire [31:0] dat_i;
 
@@ -303,9 +300,9 @@ req_wb_bridge bridge_i (
 	.wb_dat_i(dat_i)
 );
 
-wire        rom_stb, ram_stb, periph_stb, sdram_stb;
-wire        rom_ack, ram_ack, periph_ack, sdram_ack;
-wire [31:0] rom_dat, ram_dat, periph_dat, sdram_dat;
+wire        rom_stb, ram_stb, periph_stb;
+wire        rom_ack, ram_ack, periph_ack;
+wire [31:0] rom_dat, ram_dat, periph_dat;
 
 wb_dec dec_i (
 	.clk_i(sys_clk),
@@ -327,28 +324,14 @@ wb_dec dec_i (
 	.periph_ack_i(periph_ack),
 	.periph_dat_i(periph_dat),
 
-	.sdram_stb_o(sdram_stb),
-	.sdram_ack_i(sdram_ack),
-	.sdram_dat_i(sdram_dat)
+	.sdram_stb_o(),
+	.sdram_ack_i(1'b0),
+	.sdram_dat_i(32'd0)
 );
 
-assign sdram_ack = 1'b0;
-assign sdram_dat = 32'd0;
-
-wire uart_stb, uart_ack;
-wire [31:0] uart_dat;
-
-wire flash_stb, flash_ack;
-wire [31:0] flash_dat;
-
-wire timer_stb, timer_ack;
-wire [31:0] timer_dat;
-
-wire sd_stb, sd_ack;
-wire [31:0] sd_dat;
-
-wire eth_stb, eth_ack;
-wire [31:0] eth_dat;
+wire        uart_stb, flash_stb, timer_stb, sd_stb, eth_stb, irqc_stb;
+wire        uart_ack, flash_ack, timer_ack, sd_ack, eth_ack, irqc_ack;
+wire [31:0] uart_dat, flash_dat, timer_dat, sd_dat, eth_dat, irqc_dat;
 
 wb_arb #(
 	.SLAVES(16)
@@ -356,7 +339,7 @@ wb_arb #(
 	.clk_i(sys_clk),
 	.rst_i(rst_o),
 	.stb_i(periph_stb),
-	.adr_i(adr_o),
+	.adr_i(adr_o[27:24]),
 	.ack_o(periph_ack),
 	.dat_o(periph_dat),
 	.slv_stb_o({eth_stb, sd_stb, timer_stb, flash_stb, uart_stb}),
@@ -366,6 +349,7 @@ wb_arb #(
 
 wb_mem #(
 	.ROM("TRUE"),
+	.SIZE(1024),
 	.INIT("rom.mem")
 ) rom_i (
 	.clk_i(sys_clk),
@@ -375,7 +359,7 @@ wb_mem #(
 	.stb_i(rom_stb),
 
 	.we_i(we_o),
-	.adr_i(adr_o),
+	.adr_i(adr_o[9:0]),
 
 	.sel_i(sel_o),
 	.dat_i(dat_o),
@@ -384,7 +368,9 @@ wb_mem #(
 	.dat_o(rom_dat)
 );
 
-wb_mem ram_i (
+wb_mem #(
+	.SIZE(1024)
+) ram_i (
 	.clk_i(sys_clk),
 	.rst_i(rst_o),
 
@@ -392,7 +378,7 @@ wb_mem ram_i (
 	.stb_i(ram_stb),
 
 	.we_i(we_o),
-	.adr_i(adr_o),
+	.adr_i(adr_o[9:0]),
 
 	.sel_i(sel_o),
 	.dat_i(dat_o),
@@ -416,7 +402,7 @@ wb_uart uart_i (
 	.stb_i(uart_stb),
 
 	.we_i(we_o),
-	.adr_i(adr_o),
+	.adr_i(adr_o[1:0]),
 
 	.sel_i(sel_o),
 	.dat_i(dat_o),
@@ -437,7 +423,7 @@ wb_spi flash_i (
 	.stb_i(flash_stb),
 
 	.we_i(we_o),
-	.adr_i(adr_o),
+	.adr_i(adr_o[1:0]),
 
 	.sel_i(sel_o),
 	.dat_i(dat_o),
@@ -458,7 +444,7 @@ wb_spi sd_i (
 	.stb_i(sd_stb),
 
 	.we_i(we_o),
-	.adr_i(adr_o),
+	.adr_i(adr_o[1:0]),
 
 	.sel_i(sel_o),
 	.dat_i(dat_o),
@@ -479,7 +465,7 @@ wb_spi eth_i (
 	.stb_i(eth_stb),
 
 	.we_i(we_o),
-	.adr_i(adr_o),
+	.adr_i(adr_o[1:0]),
 
 	.sel_i(sel_o),
 	.dat_i(dat_o),
@@ -496,7 +482,7 @@ wb_tim timer_i (
 	.stb_i(timer_stb),
 
 	.we_i(we_o),
-	.adr_i(adr_o),
+	.adr_i(adr_o[0]),
 
 	.sel_i(sel_o),
 	.dat_i(dat_o),

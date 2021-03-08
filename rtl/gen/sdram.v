@@ -60,16 +60,16 @@ reg data_t = 1'b1;
 
 genvar i;
 generate
-	for (i = 0; i < RW; i = i + 1) begin
+	for (i = 0; i < RW; i = i + 1) begin : a_oreg_gen
 		oreg oreg_a_i (clk, addr[i], addr_o[i]);
 	end
-	for (i = 0; i < BW; i = i + 1) begin
+	for (i = 0; i < BW; i = i + 1) begin : ba_oreg_gen
 		oreg oreg_ba_i (clk, baddr[i], baddr_o[i]);
 	end
-	for (i = 0; i < MW; i = i + 1) begin
+	for (i = 0; i < MW; i = i + 1) begin : dm_oreg_gen
 		oreg oreg_dm_i (clk, dm[i], dm_o[i]);
 	end
-	for (i = 0; i < DW; i = i + 1) begin
+	for (i = 0; i < DW; i = i + 1) begin : d_ioreg_gen
 		ioreg ioreg_d_i (clk, data[i], data_o[i], data_i[i], data_t);
 	end
 endgenerate
@@ -130,6 +130,8 @@ localparam TRFC = 4'd6, TRP = 4'd2, TMRD = 4'd2, TRAS = 4'd5, TRC = 4'd6, TRCD =
 localparam WB_S = 1'b1, WB_BL = 1'b0, OP_STD = 2'b00, CL2 = 3'b010,
 	   CL3 = 3'b011, BT_SEQ = 1'b0, BL2 = 3'b001, BL1 = 3'b000;
 
+localparam CL = 2;
+
 reg [4:0] state = S_INOP;
 reg [3:0] cmd_d = 4'd1;
 
@@ -145,12 +147,10 @@ reg [AW-1:0] addr_i;
 reg [3:0] len_i;
 reg we_i;
 
-reg [4:0] dvalid = 5'b00000;
+reg [CL+1:0] dvalid = {(CL+1){1'b0}};
 
 assign dout_valid = dvalid[0];
 assign dout = data_i;
-
-localparam CL = 2;
 
 always @(posedge clk) begin
 	if (rst) begin
@@ -161,7 +161,7 @@ always @(posedge clk) begin
 		ref_en <= 1'b0;
 	end else begin
 		cmd_d  <= cmd_d + 1'b1;
-		dvalid <= {1'b0, dvalid[4:1]};
+		dvalid <= {1'b0, dvalid[CL+1:1]};
 		case(state)
 			S_INOP: begin
 				cmd_o <= NOP;

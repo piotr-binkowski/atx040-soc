@@ -67,7 +67,7 @@ always @(posedge clk_i) begin
 	if(clk_phase ^ bclk_phase) begin
 		phase <= 2;
 	end else begin
-		phase <= phase + 1;
+		phase <= phase + 1'b1;
 	end
 end
 
@@ -82,7 +82,7 @@ always @(posedge clk_i) begin
 	if(rst_i) begin
 		rst_cnt <= 0;
 	end else if (rst_cnt < 1024) begin
-		rst_cnt <= rst_cnt + 1;
+		rst_cnt <= rst_cnt + 1'b1;
 	end
 end
 

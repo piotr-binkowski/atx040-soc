@@ -54,24 +54,15 @@ input  read_ack;
 output wb_cyc_o;
 output wb_stb_o;
 input  wb_ack_i;
-output wb_we_o;
-output [COLS-1:0] wb_sel_o;
-output [AW-3:0] wb_adr_o;
+output reg wb_we_o;
+output reg [COLS-1:0] wb_sel_o;
+output reg [AW-3:0] wb_adr_o;
 output [DW-1:0] wb_dat_o;
 input  [DW-1:0] wb_dat_i;
 
-reg stb_i;
-assign wb_cyc_o = stb_i;
-assign wb_stb_o = stb_i;
-
-reg we_i;
-assign wb_we_o = we_i;
-
-reg [COLS-1:0] sel_i;
-assign wb_sel_o = sel_i;
-
-reg [AW-3:0] adr_i;
-assign wb_adr_o = adr_i;
+reg wb_stb = 1'b0;
+assign wb_cyc_o = wb_stb;
+assign wb_stb_o = wb_stb;
 
 wire read_fifo_full;
 wire read_fifo_empty;
@@ -88,39 +79,38 @@ reg [2:0] len;
 
 always @(posedge clk_i) begin
 	if(rst_i) begin
-		state      <= IDLE;
-		stb_i      <= 1'b0;
-		req_ready  <= 1'b0;
-		len        <= 4'd0;
+		state     <= IDLE;
+		wb_stb    <= 1'b0;
+		req_ready <= 1'b0;
+		len       <= 4'd0;
 	end else begin
 		case(state)
 			IDLE: begin 
 				req_ready  <= 1'b1;
 				if(req_valid & req_ready) begin
 					req_ready <= 1'b0;
-					we_i      <= req_we;
-					sel_i     <= req_mask;
-					adr_i     <= req_addr[31:2];
+					wb_we_o   <= req_we;
+					wb_sel_o  <= req_mask;
+					wb_adr_o  <= req_addr[31:2];
 					state     <= XFER;
 					len       <= req_len;
-					stb_i     <= ((!read_fifo_full) & (!req_we)) | ((!write_fifo_empty) & req_we);
 				end
 			end
 			XFER: begin
-				stb_i <= ((!read_fifo_full) & (!we_i)) | ((!write_fifo_empty) & we_i);
+				wb_stb <= ((!read_fifo_full) & (!wb_we_o)) | ((!write_fifo_empty) & wb_we_o);
 				if (wb_stb_o && wb_ack_i) begin
-					stb_i           <= 1'b0;
+					wb_stb <= 1'b0;
 					if (len == 3'b1) begin
 						state <= IDLE;
 					end else begin
-						adr_i[1:0] <= adr_i[1:0] + 1'b1; 
-						len        <= len - 1'b1;
+						wb_adr_o[1:0] <= wb_adr_o[1:0] + 1'b1; 
+						len           <= len - 1'b1;
 					end
 				end
 			end
 			default: begin
-				state <= IDLE;
-				stb_i <= 1'b0;
+				state  <= IDLE;
+				wb_stb <= 1'b0;
 			end
 		endcase
 	end

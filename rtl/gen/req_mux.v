@@ -1,12 +1,8 @@
 module req_mux(
-	input clk,
-	input rst,
-
-	input cpu_req_we,
 	input cpu_req_valid,
 	output cpu_req_ready,
 	input [2:0] cpu_req_len,
-	input [31:0] cpu_req_addr,
+	input [1:0] cpu_req_addr,
 
 	input cpu_write_valid,
 
@@ -35,7 +31,7 @@ module req_mux(
 
 wire sel;
 
-assign sel = (cpu_req_addr[31:28] != 4'd0);
+assign sel = (cpu_req_addr != 2'd0);
 
 assign wb_req_valid = sel & cpu_req_valid;
 assign sdram_req_valid = !sel & cpu_req_valid;

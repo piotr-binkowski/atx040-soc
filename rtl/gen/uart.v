@@ -17,7 +17,7 @@ reg pulse = 1'b0;
 
 always @(posedge clk) begin
 	if(cnt < DIV) begin
-		cnt   <= cnt + 1;
+		cnt   <= cnt + 1'b1;
 		pulse <= 0;
 	end else begin
 		cnt   <= 0;

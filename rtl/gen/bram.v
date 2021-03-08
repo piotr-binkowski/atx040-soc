@@ -25,7 +25,7 @@ always @(posedge clk)
 
 generate
 	genvar i;
-	for (i = 0; i < COLS; i = i+1) begin
+	for (i = 0; i < COLS; i = i+1) begin : byte_sel_gen
 		always @(posedge clk) begin
 			if (wstrb[i])
 				mem[waddr][(i+1)*8-1: i*8] <= wdata[(i+1)*8-1:i*8];

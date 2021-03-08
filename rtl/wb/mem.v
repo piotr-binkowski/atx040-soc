@@ -25,7 +25,7 @@ output reg ack_o = 1'b0;
 
 wire [COLS-1:0] wstrb;
 
-assign wstrb = (ROM) ? 0 : (sel_i & {(COLS){we_i}} & {(COLS){ack_o}});
+assign wstrb = (ROM) ? {(COLS){1'b0}} : (sel_i & {(COLS){we_i}} & {(COLS){ack_o}});
 
 bram_wsel #(
 	.INIT(INIT),

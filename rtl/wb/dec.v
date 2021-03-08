@@ -3,7 +3,7 @@ module wb_dec(
 	rom_stb_o, rom_ack_i, rom_dat_i,
 	ram_stb_o, ram_ack_i, ram_dat_i,
 	periph_stb_o, periph_ack_i, periph_dat_i,
-	sdram_stb_o, sdram_ack_i, sdram_dat_i,
+	sdram_stb_o, sdram_ack_i, sdram_dat_i
 );
 
 localparam SDRAM_ADDR  = 2'b00;
