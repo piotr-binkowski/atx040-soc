@@ -1,6 +1,6 @@
 module spi(clk, rst, quad, din, din_valid, din_ready, dout, dout_valid, dout_ready, sck, miso, mosi);
 
-parameter DIV = 8;
+parameter DIV = 4;
 parameter DW = 32;
 parameter CW = $clog2(DIV*DW);
 
