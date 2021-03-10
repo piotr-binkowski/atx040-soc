@@ -320,9 +320,9 @@ wb_dec dec_i (
 	.sdram_dat_i(32'd0)
 );
 
-wire        uart_stb, flash_stb, timer_stb, sd_stb, eth_stb, irqc_stb;
-wire        uart_ack, flash_ack, timer_ack, sd_ack, eth_ack, irqc_ack;
-wire [31:0] uart_dat, flash_dat, timer_dat, sd_dat, eth_dat, irqc_dat;
+wire        uart_stb, flash_stb, timer_stb, sd_stb, eth_stb, irqc_stb, i2s_stb;
+wire        uart_ack, flash_ack, timer_ack, sd_ack, eth_ack, irqc_ack, i2s_ack;
+wire [31:0] uart_dat, flash_dat, timer_dat, sd_dat, eth_dat, irqc_dat, i2s_dat;
 
 wb_arb #(
 	.SLAVES(16)
@@ -333,9 +333,9 @@ wb_arb #(
 	.adr_i(adr_o[27:24]),
 	.ack_o(periph_ack),
 	.dat_o(periph_dat),
-	.slv_stb_o({irqc_stb, eth_stb, sd_stb, timer_stb, flash_stb, uart_stb}),
-	.slv_ack_i({irqc_ack, eth_ack, sd_ack, timer_ack, flash_ack, uart_ack}),
-	.slv_dat_i({irqc_dat, eth_dat, sd_dat, timer_dat, flash_dat, uart_dat})
+	.slv_stb_o({i2s_stb, irqc_stb, eth_stb, sd_stb, timer_stb, flash_stb, uart_stb}),
+	.slv_ack_i({i2s_ack, irqc_ack, eth_ack, sd_ack, timer_ack, flash_ack, uart_ack}),
+	.slv_dat_i({i2s_dat, irqc_dat, eth_dat, sd_dat, timer_dat, flash_dat, uart_dat})
 );
 
 wb_mem #(
@@ -482,6 +482,31 @@ wb_tim timer_i (
 	.dat_o(timer_dat)
 );
 
+wire i2s_irq;
+
+wb_i2s i2s_i (
+	.clk_i(sys_clk),
+	.rst_i(rst_o),
+
+	.cyc_i(cyc_o),
+	.stb_i(i2s_stb),
+
+	.we_i(we_o),
+	.adr_i(adr_o[0]),
+
+	.sel_i(sel_o),
+	.dat_i(dat_o),
+
+	.ack_o(i2s_ack),
+	.dat_o(i2s_dat),
+
+	.irq(i2s_irq),
+
+	.wsel(i2s_wsel),
+	.dout(i2s_dout),
+	.bclk(i2s_bclk)
+);
+
 irqc irqc_i (
 	.clk_i(sys_clk),
 	.rst_i(rst_o),
@@ -545,12 +570,6 @@ systick systick_i (
 
 assign eth_rst  = !rst_o;
 
-assign irq = {29'd0, !eth_int, systick_irq, uart_irq};
-
-/* Unused pins */
-
-assign i2s_wsel = 0;
-assign i2s_dout = 0;
-assign i2s_bclk = 0;
+assign irq = {28'd0, i2s_irq, !eth_int, systick_irq, uart_irq};
 
 endmodule
