@@ -45,6 +45,7 @@ module cpuif (
 );
 
 parameter ROM_OFF = 16'h4000;
+parameter CLK_DIV = 3;
 
 assign cpu_irq  = ~irq_req;
 
@@ -64,11 +65,12 @@ always @(posedge clk_i) begin
 end
 
 always @(posedge clk_i) begin
-	if(clk_phase ^ bclk_phase) begin
-		phase <= 2;
-	end else begin
+	if(clk_phase ^ bclk_phase)
+		phase <= 2'd2;
+	else if(phase == (CLK_DIV - 1))
+		phase <= 2'd0;
+	else
 		phase <= phase + 1'b1;
-	end
 end
 
 /* Reset */
@@ -86,8 +88,8 @@ always @(posedge clk_i) begin
 	end
 end
 
-assign rst_cpu  = rst_cnt > (256)  ? 1'b0 : 1'b1;
-assign rst_fsm  = rst_cnt > (256+512+8) ? 1'b0 : 1'b1;
+assign rst_cpu  = rst_cnt > (64*CLK_DIV)  ? 1'b0 : 1'b1;
+assign rst_fsm  = rst_cnt > ((64+128+2)*CLK_DIV) ? 1'b0 : 1'b1;
 
 reg [3:0] cdis_ext_sync = 4'b1111;
 
@@ -229,11 +231,11 @@ always @(posedge clk_i) begin
 				state <= IDLE;
 			end
 
-			READ0: if(phase == 2) begin
+			READ0: if(phase == 1) begin
 				dir_i <= 1'b0;
 				state <= READ1;
 			end
-			READ1: if(phase == 2) begin
+			READ1: if(phase == 1) begin
 				if(read_valid) begin
 					dat_i    <= read_data;
 					read_ack <= 1'b1;
@@ -255,7 +257,7 @@ always @(posedge clk_i) begin
 				end
 			end
 
-			WRITE0: if(phase == 2) begin
+			WRITE0: if(phase == 1) begin
 				ta_o <= 1'b0;
 				state <= WRITE1;
 			end
