@@ -58,15 +58,23 @@ module top(
 	output wire i2s_dout,
 	output wire i2s_bclk,
 	/* PS2 */
-	input  wire ps2_dat,
-	input  wire ps2_clk,
+	//input  wire ps2_dat,
+	//input  wire ps2_clk,
 	/* USB */
-	input  wire usb0_m,
+	//input  wire usb0_m,
 	input  wire usb0_p,
 	output wire usb0_pu,
-	input  wire usb1_m,
+	//input  wire usb1_m,
 	input  wire usb1_p,
-	output wire usb1_pu
+	output wire usb1_pu,
+	/* VGA */
+	output wire vga_clk,
+	output wire vga_vsync,
+	output wire vga_hsync,
+
+	output wire [5:0] vga_b,
+	output wire [5:0] vga_g,
+	output wire [5:0] vga_r
 );
 
 wire clk24_buf;
@@ -75,6 +83,7 @@ wire cpu_bclk_i;
 wire cpu_pclk_i;
 wire sys_clk;
 wire sdram_clk_i;
+wire vga_clk_i;
 
 IBUFG clk24_ibuf (
 	.I(clk24),
@@ -87,10 +96,10 @@ clkgen clkgen_i (
 	.cpu_pclk(cpu_pclk_i),
 	.sys_clk(sys_clk),
 	.sdram_clk(sdram_clk_i),
+	.clk25(vga_clk_i),
 	/* Unused */
 	.locked(),
 	.clk24(),
-	.clk25(),
 	.clk48()
 );
 
@@ -125,6 +134,17 @@ ODDR2 oddr_sdram_clk (
 	.R(1'b0),
 	.S(1'b0),
 	.Q(sdram_clk)
+);
+
+ODDR2 oddr_vga_clk (
+	.C0(vga_clk_i),
+	.C1(~vga_clk_i),
+	.CE(1'b1),
+	.D0(1'b1),
+	.D1(1'b0),
+	.R(1'b0),
+	.S(1'b0),
+	.Q(vga_clk)
 );
 
 wire reset_ext;
@@ -528,6 +548,18 @@ irqc irqc_i (
 	.irq_ack(irq_ack)
 );
 
+wire vga_de;
+
+vga_core vga_i (
+	.clk(vga_clk_i),
+	.vsync(vga_vsync),
+	.hsync(vga_hsync),
+	.de(vga_de)
+);
+
+assign vga_r = (vga_de) ? 6'h3F : 6'h00;
+assign vga_g = (vga_de) ? 6'h3F : 6'h00;
+assign vga_b = (vga_de) ? 6'h3F : 6'h00;
 
 req_sdram sdram_i (
 	.clk(sys_clk),
