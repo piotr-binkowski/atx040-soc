@@ -1,6 +1,7 @@
 module wb_spi(clk_i, rst_i, cyc_i, stb_i, adr_i, we_i, dat_i, sel_i, ack_o, dat_o, sck, ss, miso, mosi);
 
-parameter  FIFO_DEPTH = 1024;
+parameter  TX_FIFO_DEPTH = 16;
+parameter  RX_FIFO_DEPTH = 16;
 
 localparam AW   = 2;
 localparam DW   = 32;
@@ -50,7 +51,7 @@ wire quad;
 assign quad = (sel_i == 4'b1111);
 
 fifo #(
-	.SIZE(FIFO_DEPTH),
+	.SIZE(TX_FIFO_DEPTH),
 	.DW(DW+1)
 ) fifo_tx_i (
 	.clk(clk_i),
@@ -70,7 +71,7 @@ wire rx_empty;
 wire rx_full;
 
 fifo #(
-	.SIZE(FIFO_DEPTH),
+	.SIZE(RX_FIFO_DEPTH),
 	.DW(DW)
 ) fifo_rx_i (
 	.clk(clk_i),
