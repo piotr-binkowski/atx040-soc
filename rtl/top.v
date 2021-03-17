@@ -96,11 +96,8 @@ clkgen clkgen_i (
 	.cpu_pclk(cpu_pclk_i),
 	.sys_clk(sys_clk),
 	.sdram_clk(sdram_clk_i),
-	.clk25(vga_clk_i),
-	/* Unused */
-	.locked(),
-	.clk24(),
-	.clk48()
+	.vga_clk(vga_clk_i),
+	.locked()
 );
 
 ODDR2 oddr_cpu_bclk (
