@@ -547,7 +547,7 @@ irqc irqc_i (
 
 wire vga_de;
 
-vga_core vga_i (
+vga_timing vga_i (
 	.clk(vga_clk_i),
 	.vsync(vga_vsync),
 	.hsync(vga_hsync),
