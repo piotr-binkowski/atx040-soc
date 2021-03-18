@@ -1,10 +1,10 @@
 module irqc (clk_i, rst_i, cyc_i, stb_i, we_i, dat_i, sel_i, ack_o, dat_o, irq_in, irq_req, irq_vec, irq_ack);
 
 localparam DW = 32;
-localparam IW = 32;
 localparam COLS = DW/8;
 localparam IRQ_BASE = 8'd64;
 
+parameter IW = 32;
 parameter CW = $clog2(IW);
 
 input clk_i;
