@@ -129,11 +129,10 @@ wire        uart_stb, flash_stb, timer_stb, sd_stb, eth_stb, irqc_stb, i2s_stb;
 wire        uart_ack, flash_ack, timer_ack, sd_ack, eth_ack, irqc_ack, i2s_ack;
 wire [31:0] uart_dat, flash_dat, timer_dat, sd_dat, eth_dat, irqc_dat, i2s_dat;
 
-wb_arb #(
-	.SLAVES(16)
-) arb_i (
-	.clk_i(clk),
-	.rst_i(rst),
+wb_decoder #(
+	.SLAVES(7),
+	.SW(4)
+) decoder_i (
 	.stb_i(periph_stb),
 	.adr_i(adr_o[27:24]),
 	.ack_o(periph_ack),

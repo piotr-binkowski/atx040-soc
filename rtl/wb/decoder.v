@@ -1,5 +1,4 @@
-module wb_arb(
-	clk_i, rst_i,
+module wb_decoder(
 	stb_i, adr_i, ack_o, dat_o,
 	slv_stb_o, slv_ack_i, slv_dat_i
 );
@@ -9,10 +8,7 @@ parameter  SW = $clog2(SLAVES);
 
 localparam DW = 32;
 
-input clk_i;
-input rst_i;
 input stb_i;
-
 input [SW-1:0] adr_i;
 
 output reg ack_o;
