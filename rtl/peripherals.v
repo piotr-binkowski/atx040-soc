@@ -96,50 +96,21 @@ req_wb_bridge bridge_i (
 	.wb_dat_i(dat_i)
 );
 
-wire        rom_stb, ram_stb, periph_stb;
-wire        rom_ack, ram_ack, periph_ack;
-wire [31:0] rom_dat, ram_dat, periph_dat;
-
-wb_dec dec_i (
-	.clk_i(clk),
-	.rst_i(rst),
-	.stb_i(stb_o),
-	.adr_i(adr_o),
-	.ack_o(ack_i),
-	.dat_o(dat_i),
-
-	.rom_stb_o(rom_stb),
-	.rom_ack_i(rom_ack),
-	.rom_dat_i(rom_dat),
-
-	.ram_stb_o(ram_stb),
-	.ram_ack_i(ram_ack),
-	.ram_dat_i(ram_dat),
-
-	.periph_stb_o(periph_stb),
-	.periph_ack_i(periph_ack),
-	.periph_dat_i(periph_dat),
-
-	.sdram_stb_o(),
-	.sdram_ack_i(1'b0),
-	.sdram_dat_i(32'd0)
-);
-
-wire        uart_stb, flash_stb, timer_stb, sd_stb, eth_stb, irqc_stb, i2s_stb;
-wire        uart_ack, flash_ack, timer_ack, sd_ack, eth_ack, irqc_ack, i2s_ack;
-wire [31:0] uart_dat, flash_dat, timer_dat, sd_dat, eth_dat, irqc_dat, i2s_dat;
+wire        rom_stb, uart_stb, flash_stb, timer_stb, sd_stb, eth_stb, irqc_stb, i2s_stb;
+wire        rom_ack, uart_ack, flash_ack, timer_ack, sd_ack, eth_ack, irqc_ack, i2s_ack;
+wire [31:0] rom_dat, uart_dat, flash_dat, timer_dat, sd_dat, eth_dat, irqc_dat, i2s_dat;
 
 wb_decoder #(
-	.SLAVES(7),
+	.SLAVES(8),
 	.SW(4)
 ) decoder_i (
-	.stb_i(periph_stb),
-	.adr_i(adr_o[27:24]),
-	.ack_o(periph_ack),
-	.dat_o(periph_dat),
-	.slv_stb_o({i2s_stb, irqc_stb, eth_stb, sd_stb, timer_stb, flash_stb, uart_stb}),
-	.slv_ack_i({i2s_ack, irqc_ack, eth_ack, sd_ack, timer_ack, flash_ack, uart_ack}),
-	.slv_dat_i({i2s_dat, irqc_dat, eth_dat, sd_dat, timer_dat, flash_dat, uart_dat})
+	.stb_i(stb_o),
+	.adr_i(adr_o[25:22]),
+	.ack_o(ack_i),
+	.dat_o(dat_i),
+	.slv_stb_o({i2s_stb, irqc_stb, eth_stb, sd_stb, timer_stb, flash_stb, uart_stb, rom_stb}),
+	.slv_ack_i({i2s_ack, irqc_ack, eth_ack, sd_ack, timer_ack, flash_ack, uart_ack, rom_ack}),
+	.slv_dat_i({i2s_dat, irqc_dat, eth_dat, sd_dat, timer_dat, flash_dat, uart_dat, rom_dat})
 );
 
 wb_mem #(
@@ -161,25 +132,6 @@ wb_mem #(
 
 	.ack_o(rom_ack),
 	.dat_o(rom_dat)
-);
-
-wb_mem #(
-	.SIZE(1024)
-) ram_i (
-	.clk_i(clk),
-	.rst_i(rst),
-
-	.cyc_i(cyc_o),
-	.stb_i(ram_stb),
-
-	.we_i(we_o),
-	.adr_i(adr_o[9:0]),
-
-	.sel_i(sel_o),
-	.dat_i(dat_o),
-
-	.ack_o(ram_ack),
-	.dat_o(ram_dat)
 );
 
 wb_uart uart_i (

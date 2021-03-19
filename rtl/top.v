@@ -217,35 +217,29 @@ cpuif cpuif_i (
 	.irq_ack(irq_ack)
 );
 
-req_mux req_mux_i (
-	.cpu_req_len(cpu_req_len),
-	.cpu_req_addr(cpu_req_addr[31:30]),
-	.cpu_req_valid(cpu_req_valid),
-	.cpu_req_ready(cpu_req_ready),
+wire [13:0] slv_req_valid, slv_write_valid, slv_read_ack;
 
-	.cpu_write_valid(cpu_write_valid),
+req_decoder #(
+	.SLAVES(16)
+) req_decoder_i (
+	.req_valid(cpu_req_valid),
+	.req_ready(cpu_req_ready),
+	.req_addr(cpu_req_addr[31:28]),
 
-	.cpu_read_ack(cpu_read_ack),
-	.cpu_read_data(cpu_read_data),
-	.cpu_read_valid(cpu_read_valid),
+	.write_valid(cpu_write_valid),
 
-	.sdram_req_ready(sdram_req_ready),
-	.sdram_req_valid(sdram_req_valid),
+	.read_ack(cpu_read_ack),
+	.read_data(cpu_read_data),
+	.read_valid(cpu_read_valid),
 
-	.sdram_write_valid(sdram_write_valid),
+	.slv_req_valid({wb_req_valid, slv_req_valid, sdram_req_valid}),
+	.slv_req_ready({wb_req_ready, 14'd0, sdram_req_ready}),
 
-	.sdram_read_ack(sdram_read_ack),
-	.sdram_read_data(sdram_read_data),
-	.sdram_read_valid(sdram_read_valid),
+	.slv_write_valid({wb_write_valid, slv_write_valid, sdram_write_valid}),
 
-	.wb_req_ready(wb_req_ready),
-	.wb_req_valid(wb_req_valid),
-
-	.wb_write_valid(wb_write_valid),
-
-	.wb_read_ack(wb_read_ack),
-	.wb_read_data(wb_read_data),
-	.wb_read_valid(wb_read_valid)
+	.slv_read_ack({wb_read_ack, slv_read_ack, sdram_read_ack}),
+	.slv_read_data({wb_read_data, 448'd0, sdram_read_data}),
+	.slv_read_valid({wb_read_valid, 14'd0, sdram_read_valid})
 );
 
 peripherals periph_i (

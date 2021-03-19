@@ -44,7 +44,7 @@ module cpuif (
 	output wire irq_ack
 );
 
-parameter ROM_OFF = 16'h4000;
+parameter ROM_OFF = 16'hF000;
 parameter CLK_DIV = 3;
 
 assign cpu_irq  = ~irq_req;
