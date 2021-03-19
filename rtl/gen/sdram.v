@@ -8,6 +8,7 @@ module sdram(
 	data, dm, addr, baddr
 );
 
+parameter TCK   = 10;
 parameter ROWS  = 8192;
 parameter COLS  = 512;
 parameter BANKS = 4;
@@ -125,7 +126,10 @@ localparam S_INOP = 5'd0, S_IPRE = 5'd1, S_IREF0 = 5'd2, S_IREF1 = 5'd3,
 	   S_ILMR = 5'd4, S_IDLE = 5'd5, S_REF = 5'd6, S_PRE = 5'd7, S_ACT = 5'd8,
 	   S_WR = 5'd9, S_RD = 5'd10, S_RREC = 5'd11, S_WREC = 5'd12;
 
-localparam TRFC = 4'd6, TRP = 4'd2, TMRD = 4'd2, TRAS = 4'd5, TRC = 4'd6, TRCD = 4'd2, TRRD = 4'd2, TWR = 4'd2;
+localparam TRFC = (60 - 1) / TCK + 1, TRP  = (20 - 1) / TCK + 1;
+localparam TMRD = (20 - 1) / TCK + 1, TRAS = (50 - 1) / TCK + 1;
+localparam TRC  = (60 - 1) / TCK + 1, TRCD = (20 - 1) / TCK + 1;
+localparam TRRD = (20 - 1) / TCK + 1, TWR  = (20 - 1) / TCK + 1;
 
 localparam WB_S = 1'b1, WB_BL = 1'b0, OP_STD = 2'b00, CL2 = 3'b010,
 	   CL3 = 3'b011, BT_SEQ = 1'b0, BL2 = 3'b001, BL1 = 3'b000;
