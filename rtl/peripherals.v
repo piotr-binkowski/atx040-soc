@@ -115,7 +115,7 @@ wb_decoder #(
 
 wb_mem #(
 	.ROM("TRUE"),
-	.SIZE(1024),
+	.SIZE(64),
 	.INIT("rom.mem")
 ) rom_i (
 	.clk_i(clk),
@@ -125,7 +125,7 @@ wb_mem #(
 	.stb_i(rom_stb),
 
 	.we_i(we_o),
-	.adr_i(adr_o[9:0]),
+	.adr_i(adr_o[5:0]),
 
 	.sel_i(sel_o),
 	.dat_i(dat_o),
