@@ -40,7 +40,7 @@ localparam FIFO_DEPTH = 8;
 reg [3:0] wr_mask;
 
 always @(posedge clk)
-	if (req_valid)
+	if (req_valid && req_ready)
 		wr_mask <= req_mask;
 
 reg wr_mux = 1'b0;

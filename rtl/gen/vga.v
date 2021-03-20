@@ -1,58 +1,6 @@
-module vga_data_sync(clk, pclk, vsync_i, hsync_i, de_i, dat_i, dat_ack, vsync_o, hsync_o, dat_o);
+module vga_timing(clk, vsync, hsync, de, ack, sync);
 
-parameter DW = 18;
-
-input clk;
-input pclk;
-
-input vsync_i;
-input hsync_i;
-input de_i;
-
-input [DW-1:0] dat_i;
-
-output reg dat_ack = 1'b0;
-output reg vsync_o = 1'b0;
-output reg hsync_o = 1'b0;
-output reg [DW-1:0] dat_o;
-
-/* Phase detect */
-
-reg pclk_phase = 0;
-reg clk_phase  = 0;
-
-reg [1:0] phase = 0;
-
-always @(posedge pclk)
-	pclk_phase <= ~pclk_phase;
-
-always @(posedge clk)
-	clk_phase <= pclk_phase;
-
-always @(posedge clk)
-	if(clk_phase ^ pclk_phase)
-		phase <= 2'd2;
-	else
-		phase <= phase + 1'b1;
-
-always @(posedge clk) begin
-	dat_ack <= 1'b0;
-	if(phase == 0) begin
-		hsync_o <= hsync_i;
-		vsync_o <= vsync_i;
-		if(de_i) begin
-			dat_o   <= dat_i;
-			dat_ack <= 1'b1;
-		end else begin
-			dat_o   <= {(DW){1'b0}};
-		end
-	end
-end
-
-endmodule
-
-module vga_timing(clk, vsync, hsync, de);
-
+parameter DIV = 4;
 parameter HVIS = 640;
 parameter HFP  = 16;
 parameter HSP  = 96;
@@ -69,13 +17,19 @@ parameter VMAX = VVIS + VFP + VSP + VBP - 1;
 parameter HW = $clog2(HMAX);
 parameter VW = $clog2(VMAX);
 
+parameter CW = $clog2(DIV);
+
 input  clk;
 output vsync;
 output hsync;
 output de;
+output ack;
+output sync;
 
 reg [HW-1:0] hcnt = {(HW){1'b0}};
 reg [VW-1:0] vcnt = {(VW){1'b0}};
+reg [CW-1:0] ccnt = {(CW){1'b0}};
+reg strobe = 1'b0;
 
 wire de_x = (hcnt < HVIS);
 wire de_y = (vcnt < VVIS);
@@ -85,17 +39,35 @@ assign de = de_x && de_y;
 assign hsync = (hcnt >= (HVIS + HFP)) && (hcnt < (HVIS + HFP + HSP));
 assign vsync = (vcnt >= (VVIS + VFP)) && (vcnt < (VVIS + VFP + VSP));
 
-always @(posedge clk)
-	if(hcnt == HMAX)
-		hcnt <= 0;
-	else
-		hcnt <= hcnt + 1'b1;
+assign ack = de & strobe;
+
+assign sync = (vcnt == (VVIS + VFP)) && (hcnt == (HVIS + HFP)) && strobe;
+
+always @(posedge clk) begin
+	if(ccnt == (DIV-1)) begin
+		strobe <= 1'b1;
+		ccnt <= {(CW){1'b0}};
+	end else begin
+		strobe <= 1'b0;
+		ccnt <= ccnt + 1'b1;
+	end
+end
 
 always @(posedge clk)
-	if(hcnt == HMAX)
-		if(vcnt == VMAX)
-			vcnt <= 0;
+	if(strobe) begin
+		if(hcnt == HMAX)
+			hcnt <= 0;
 		else
-			vcnt <= vcnt + 1'b1;
+			hcnt <= hcnt + 1'b1;
+	end
+
+always @(posedge clk)
+	if(strobe) begin
+		if(hcnt == HMAX)
+			if(vcnt == VMAX)
+				vcnt <= 0;
+			else
+				vcnt <= vcnt + 1'b1;
+	end
 
 endmodule

@@ -155,20 +155,20 @@ reset_gen reset_gen_i (
 wire sdram_rst_o = (!cpu_rsto) | reset_ext;
 wire rst_o = sdram_rst_o | (!sdram_init_done);
 
-wire cpu_req_valid, sdram_req_valid, wb_req_valid;
-wire cpu_req_ready, sdram_req_ready, wb_req_ready;
+wire cpu_req_valid, cpu_sdram_req_valid, dma_req_valid, sdram_req_valid, wb_req_valid;
+wire cpu_req_ready, cpu_sdram_req_ready, dma_req_ready, sdram_req_ready, wb_req_ready;
 
-wire cpu_req_we;
-wire [2:0] cpu_req_len;
-wire [3:0] cpu_req_mask;
-wire [31:0] cpu_req_addr;
+wire cpu_req_we, dma_req_we, sdram_req_we;
+wire [2:0] cpu_req_len, dma_req_len, sdram_req_len;
+wire [3:0] cpu_req_mask, dma_req_mask, sdram_req_mask;
+wire [31:0] cpu_req_addr, dma_req_addr, sdram_req_addr;
 
-wire cpu_write_valid, sdram_write_valid, wb_write_valid;
-wire [31:0] cpu_write_data;
+wire cpu_write_valid, cpu_sdram_write_valid, dma_write_valid, sdram_write_valid, wb_write_valid;
+wire [31:0] cpu_write_data, dma_write_data, sdram_write_data;
 
-wire cpu_read_valid, sdram_read_valid, wb_read_valid;
-wire [31:0] cpu_read_data, sdram_read_data, wb_read_data;
-wire cpu_read_ack, sdram_read_ack, wb_read_ack;
+wire cpu_read_valid, cpu_sdram_read_valid, dma_read_valid, sdram_read_valid, wb_read_valid;
+wire [31:0] cpu_read_data, cpu_sdram_read_data, dma_read_data, sdram_read_data, wb_read_data;
+wire cpu_read_ack, cpu_sdram_read_ack, dma_read_ack, sdram_read_ack, wb_read_ack;
 
 wire irq_req;
 wire [7:0] irq_vec;
@@ -232,14 +232,94 @@ req_decoder #(
 	.read_data(cpu_read_data),
 	.read_valid(cpu_read_valid),
 
-	.slv_req_valid({wb_req_valid, slv_req_valid, sdram_req_valid}),
-	.slv_req_ready({wb_req_ready, 14'd0, sdram_req_ready}),
+	.slv_req_valid({wb_req_valid, slv_req_valid, cpu_sdram_req_valid}),
+	.slv_req_ready({wb_req_ready, 14'd0, cpu_sdram_req_ready}),
 
-	.slv_write_valid({wb_write_valid, slv_write_valid, sdram_write_valid}),
+	.slv_write_valid({wb_write_valid, slv_write_valid, cpu_sdram_write_valid}),
 
-	.slv_read_ack({wb_read_ack, slv_read_ack, sdram_read_ack}),
-	.slv_read_data({wb_read_data, 448'd0, sdram_read_data}),
-	.slv_read_valid({wb_read_valid, 14'd0, sdram_read_valid})
+	.slv_read_ack({wb_read_ack, slv_read_ack, cpu_sdram_read_ack}),
+	.slv_read_data({wb_read_data, 448'd0, cpu_sdram_read_data}),
+	.slv_read_valid({wb_read_valid, 14'd0, cpu_sdram_read_valid})
+);
+
+req_arbiter #(
+	.MASTERS(2)
+) req_arbiter_i (
+	.clk(sys_clk),
+	.rst(rst_o),
+
+	.m_req_valid({dma_req_valid, cpu_sdram_req_valid}),
+	.m_req_ready({dma_req_ready, cpu_sdram_req_ready}),
+	.m_req_len({dma_req_len, cpu_req_len}),
+	.m_req_mask({dma_req_mask, cpu_req_mask}),
+	.m_req_addr({dma_req_addr, cpu_req_addr}),
+	.m_req_we({dma_req_we, cpu_req_we}),
+
+	.m_write_valid({dma_write_valid, cpu_sdram_write_valid}),
+	.m_write_data({dma_write_data, cpu_write_data}),
+
+	.m_read_valid({dma_read_valid, cpu_sdram_read_valid}),
+	.m_read_data({dma_read_data, cpu_sdram_read_data}),
+	.m_read_ack({dma_read_ack, cpu_sdram_read_ack}),
+
+	.req_ready(sdram_req_ready),
+	.req_valid(sdram_req_valid),
+	.req_len(sdram_req_len),
+	.req_mask(sdram_req_mask),
+	.req_addr(sdram_req_addr),
+	.req_we(sdram_req_we),
+
+	.write_valid(sdram_write_valid),
+	.write_data(sdram_write_data),
+
+	.read_valid(sdram_read_valid),
+	.read_data(sdram_read_data),
+	.read_ack(sdram_read_ack)
+);
+
+wire vga_sync;
+wire dma_data_valid, dma_data_ready, pix_data_valid, pix_data_ready;
+wire [31:0] dma_data;
+wire [15:0] pix_data;
+
+req_dma #(
+	.PIXW(16)
+) req_dma_i (
+	.clk(sys_clk),
+	.rst(rst_o),
+
+	.req_valid(dma_req_valid),
+	.req_ready(dma_req_ready),
+	.req_len(dma_req_len),
+	.req_mask(dma_req_mask),
+	.req_addr(dma_req_addr),
+	.req_we(dma_req_we),
+
+	.write_valid(dma_write_valid),
+	.write_data(dma_write_data),
+
+	.read_valid(dma_read_valid),
+	.read_data(dma_read_data),
+	.read_ack(dma_read_ack),
+
+	.dout_valid(dma_data_valid),
+	.dout_ready(dma_data_ready),
+	.dout(dma_data),
+	.sync(vga_sync)
+);
+
+stream_downsize #(
+	.DIN_DW(32),
+	.DOUT_DW(16)
+) downsize_i (
+	.clk(sys_clk),
+	.rst(rst_o),
+	.din_valid(dma_data_valid),
+	.din_ready(dma_data_ready),
+	.din(dma_data),
+	.dout_valid(pix_data_valid),
+	.dout_ready(pix_data_ready),
+	.dout(pix_data)
 );
 
 peripherals periph_i (
@@ -296,13 +376,13 @@ req_sdram sdram_i (
 
 	.req_valid(sdram_req_valid),
 	.req_ready(sdram_req_ready),
-	.req_addr(cpu_req_addr),
-	.req_mask(cpu_req_mask),
-	.req_len(cpu_req_len),
-	.req_we(cpu_req_we),
+	.req_addr(sdram_req_addr),
+	.req_mask(sdram_req_mask),
+	.req_len(sdram_req_len),
+	.req_we(sdram_req_we),
 
 	.write_valid(sdram_write_valid),
-	.write_data(cpu_write_data),
+	.write_data(sdram_write_data),
 
 	.read_valid(sdram_read_valid),
 	.read_data(sdram_read_data),
@@ -320,17 +400,16 @@ req_sdram sdram_i (
 );
 
 wire vga_de;
+assign {vga_r, vga_g, vga_b} = (vga_de) ? {2'b00, pix_data} : {18'd0};
 
 vga_timing vga_i (
-	.clk(vga_clk_i),
+	.clk(sys_clk),
 	.vsync(vga_vsync),
 	.hsync(vga_hsync),
-	.de(vga_de)
+	.de(vga_de),
+	.ack(pix_data_ready),
+	.sync(vga_sync)
 );
-
-assign vga_r = (vga_de) ? 6'h3F : 6'h00;
-assign vga_g = (vga_de) ? 6'h3F : 6'h00;
-assign vga_b = (vga_de) ? 6'h3F : 6'h00;
 
 assign eth_rst  = !rst_o;
 
