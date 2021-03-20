@@ -35,7 +35,7 @@ module cpuif (
 
 	input  wire read_valid,
 	input  wire [31:0] read_data,
-	output reg  read_ack,
+	output wire read_ack,
 
 	/* Interrupt controller */
 
@@ -141,6 +141,10 @@ assign irq_ack   = ack_i;
 reg [1:0] acc_cnt = 2'b00;
 wire force_rom = (acc_cnt < 2'b10);
 
+reg read_ack_i = 1'b0;
+
+assign read_ack = (read_ack_i && (phase == 1));
+
 always @(posedge clk_i) begin
 	if(rst_fsm) begin
 		state       <= IDLE;
@@ -151,11 +155,10 @@ always @(posedge clk_i) begin
 		ack_i       <= 1'b0;
 		req_valid   <= 1'b0;
 		write_valid <= 1'b0;
-		read_ack    <= 1'b0;
+		read_ack_i  <= 1'b0;
 		acc_cnt     <= 2'b00;
 	end else begin
 		write_valid <= 1'b0;
-		read_ack    <= 1'b0;
 
 		case(state)
 			IDLE: if(phase == 0 && (~cpu_ts)) begin
@@ -232,28 +235,29 @@ always @(posedge clk_i) begin
 			end
 
 			READ0: if(phase == 1) begin
-				dir_i <= 1'b0;
-				state <= READ1;
+				dir_i      <= 1'b0;
+				state      <= READ1;
+				read_ack_i <= 1'b1;
 			end
 			READ1: if(phase == 1) begin
-				if(read_valid) begin
-					dat_i    <= read_data;
-					read_ack <= 1'b1;
-					ad_t     <= 1'b0;
-					ta_o     <= 1'b0;
-					state    <= READ2;
+				if(read_valid && read_ack) begin
+					dat_i      <= read_data;
+					read_ack_i <= 1'b0;
+					ad_t       <= 1'b0;
+					ta_o       <= 1'b0;
+					state      <= READ2;
 				end
 			end
 			READ2: if(phase == 1) begin
+				ta_o <= 1'b1;
 				if(req_len == 3'd1) begin
-					state <= IDLE;
 					dir_i <= 1'b1;
 					ad_t  <= 1'b1;
-					ta_o  <= 1'b1;
+					state <= IDLE;
 				end else begin
-					req_len <= req_len - 1'b1;
-					state   <= READ1;
-					ta_o    <= 1'b1;
+					req_len    <= req_len - 1'b1;
+					read_ack_i <= 1'b1;
+					state      <= READ1;
 				end
 			end
 
