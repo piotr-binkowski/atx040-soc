@@ -246,21 +246,24 @@ always @(posedge clk_i) begin
 			READ1: if(phase == 1) begin
 				if(read_valid && read_ack) begin
 					dat_i      <= read_data;
-					read_ack_i <= 1'b0;
+					read_ack_i <= (req_len == 1) ? 1'b0 : 1'b1;
 					ad_t       <= 1'b0;
 					ta_o       <= 1'b0;
 					state      <= READ2;
 				end
 			end
 			READ2: if(phase == 1) begin
-				ta_o <= 1'b1;
+				ta_o    <= 1'b1;
+				req_len <= req_len - 1'b1;
 				if(req_len == 1) begin
 					dir_i <= 1'b1;
 					ad_t  <= 1'b1;
 					state <= IDLE;
+				end else if(read_valid & read_ack) begin
+					read_ack_i <= (req_len == 2) ? 1'b0 : 1'b1;
+					dat_i      <= read_data;
+					ta_o       <= 1'b0;	
 				end else begin
-					req_len    <= req_len - 1'b1;
-					read_ack_i <= 1'b1;
 					state      <= READ1;
 				end
 			end
