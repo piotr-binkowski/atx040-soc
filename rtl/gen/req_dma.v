@@ -69,13 +69,13 @@ assign req_addr = BASE + {cnt, 2'b00};
 
 assign read_ack = (!fifo_full) & xfer_valid;
 assign dout_valid = !fifo_empty;
-assign fifo_rst = (state == SYNC);
+assign fifo_rst = sync;
 
-reg [7:0] fifo_lvl = 8'd0;
+reg [15:0] fifo_lvl = 0;
 
 always @(posedge clk) begin
 	if(fifo_rst) begin
-		fifo_lvl <= 8'd0;
+		fifo_lvl <= 0;
 	end else begin
 		if(fifo_wr & !fifo_rd)
 			fifo_lvl <= fifo_lvl + 1'b1;
@@ -94,7 +94,7 @@ always @(posedge clk) begin
 				state <= IDLE;
 				cnt <= {(CW){1'b0}};
 			end
-			IDLE: if(fifo_lvl < BL) begin
+			IDLE: if(fifo_lvl < (7*BL)) begin
 				len <= BL;
 				req_valid <= 1'b1;
 				state <= REQ;
@@ -105,7 +105,7 @@ always @(posedge clk) begin
 			end
 			XFER: if(read_valid & read_ack) begin
 				len <= len - 1'b1;
-				if(len == 3'd1) begin
+				if(len == 1) begin
 					state <= IDLE;
 					cnt <= cnt + BL;
 
@@ -122,7 +122,7 @@ assign fifo_wr = read_valid & xfer_valid & !fifo_full;
 assign fifo_rd = dout_ready & !fifo_empty;
 
 fifo #(
-	.SIZE(BL*2),
+	.SIZE(BL*8),
 	.DW(DW)
 ) fifo_i (
 	.clk(clk),

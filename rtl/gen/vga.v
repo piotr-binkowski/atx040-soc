@@ -1,4 +1,4 @@
-module vga_timing(clk, vsync, hsync, de, ack, sync);
+module vga_timing(clk, vsync, hsync, de, ack, sync, vclk);
 
 parameter DIV = 4;
 parameter HVIS = 640;
@@ -25,6 +25,7 @@ output hsync;
 output de;
 output ack;
 output sync;
+output reg vclk;
 
 reg [HW-1:0] hcnt = {(HW){1'b0}};
 reg [VW-1:0] vcnt = {(VW){1'b0}};
@@ -51,6 +52,13 @@ always @(posedge clk) begin
 		strobe <= 1'b0;
 		ccnt <= ccnt + 1'b1;
 	end
+end
+
+always @(posedge clk) begin
+	if(ccnt == (DIV/2 - 1))
+		vclk <= 1'b1;
+	else if(ccnt == (DIV-1))
+		vclk <= 1'b0;
 end
 
 always @(posedge clk)

@@ -4,8 +4,7 @@ module clkgen (
 	output wire cpu_bclk,
 	output wire cpu_pclk,
 	output wire sys_clk,
-	output wire sdram_clk,
-	output wire vga_clk
+	output wire sdram_clk
 );
 
 wire pll_fb;
@@ -38,13 +37,6 @@ BUFG bufg_sdram_clk_i (
 	.O(sdram_clk)
 );
 
-wire vga_clk_i;
-
-BUFG bufg_vga_clk_i (
-	.I(vga_clk_i),
-	.O(vga_clk)
-);
-
 reg [3:0] rst = 4'b1111;
 
 always @(posedge clk24_ref) begin
@@ -58,8 +50,7 @@ PLL_BASE #(
 	.CLKOUT1_DIVIDE(9),  // PCLK   66MHz
 	.CLKOUT2_DIVIDE(6),  // SYSCLK 100MHz
 	.CLKOUT3_DIVIDE(6),  // SDRAM  100MHz 90* PS
-	.CLKOUT3_PHASE(90),
-	.CLKOUT4_DIVIDE(25)  // VGA    25MHz
+	.CLKOUT3_PHASE(90)
 ) pll_cpu (
 	.CLKIN(clk24_ref),
 	.CLKFBOUT(pll_fb),
@@ -68,7 +59,6 @@ PLL_BASE #(
 	.CLKOUT1(cpu_pclk_i),
 	.CLKOUT2(sys_clk_i),
 	.CLKOUT3(sdram_clk_i),
-	.CLKOUT4(vga_clk_i),
 	.LOCKED(locked),
 	.RST(rst[3])
 );

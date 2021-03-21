@@ -79,7 +79,7 @@ module top(
 
 wire clk24_buf;
 
-wire cpu_bclk_i, cpu_pclk_i, sys_clk, sdram_clk_i, vga_clk_i;
+wire cpu_bclk_i, cpu_pclk_i, sys_clk, sdram_clk_i;
 
 IBUFG clk24_ibuf (
 	.I(clk24),
@@ -92,7 +92,6 @@ clkgen clkgen_i (
 	.cpu_pclk(cpu_pclk_i),
 	.sys_clk(sys_clk),
 	.sdram_clk(sdram_clk_i),
-	.vga_clk(vga_clk_i),
 	.locked()
 );
 
@@ -127,17 +126,6 @@ ODDR2 oddr_sdram_clk (
 	.R(1'b0),
 	.S(1'b0),
 	.Q(sdram_clk)
-);
-
-ODDR2 oddr_vga_clk (
-	.C0(vga_clk_i),
-	.C1(~vga_clk_i),
-	.CE(1'b1),
-	.D0(1'b1),
-	.D1(1'b0),
-	.R(1'b0),
-	.S(1'b0),
-	.Q(vga_clk)
 );
 
 wire reset_ext;
@@ -291,7 +279,7 @@ req_arbiter #(
 	.read_ack(sdram_read_ack)
 );
 
-localparam PIXW = 8;
+localparam PIXW = 16;
 
 wire vga_sync;
 wire dma_data_valid, dma_data_ready, pix_data_valid, pix_data_ready;
@@ -424,15 +412,32 @@ req_sdram #(
 );
 
 wire vga_de;
-assign {vga_r, vga_g, vga_b} = (vga_de) ? {pix_data[7:5], 3'd0, pix_data[4:2], 3'd0, pix_data[1:0], 4'd0} : {18'd0};
+wire vsync_o, hsync_o;
+reg  vsync_i, hsync_i;
+reg  [17:0] rgb_i;
+
+always @(posedge sys_clk) begin
+	if(PIXW == 8)
+		rgb_i   <= (vga_de) ? {pix_data[7:5], 3'd0, pix_data[4:2], 3'd0, pix_data[1:0], 4'd0} : {18'd0};
+	else if(PIXW == 16)
+		rgb_i   <= (vga_de) ? {pix_data[15:11], 1'b0, pix_data[10:5], pix_data[4:0], 1'b0} : {18'd0};
+
+	hsync_i <= hsync_o;
+	vsync_i <= vsync_o;
+end
+
+assign vga_hsync = hsync_i;
+assign vga_vsync = vsync_i;
+assign {vga_r, vga_g, vga_b} = rgb_i;
 
 vga_timing vga_i (
 	.clk(sys_clk),
-	.vsync(vga_vsync),
-	.hsync(vga_hsync),
+	.vsync(vsync_o),
+	.hsync(hsync_o),
 	.de(vga_de),
 	.ack(pix_data_ready),
-	.sync(vga_sync)
+	.sync(vga_sync),
+	.vclk(vga_clk)
 );
 
 assign eth_rst  = !rst_o;
