@@ -12,10 +12,12 @@ parameter BASE = 32'h0010_0000;
 parameter RESX = 640;
 parameter RESY = 400;
 parameter PIXW = 16;
+parameter LW   = 8;
 
-localparam BL  = 4;
 localparam DW  = 32;
 localparam AW  = 32;
+localparam MW  = 4;
+localparam BL  = {1'b1, {(LW-1){1'b0}}};
 localparam TGT = (RESX*RESY*PIXW)/DW;
 
 parameter CW = $clog2(TGT);
@@ -26,8 +28,8 @@ input      rst;
 output reg req_valid;
 input      req_ready;
 
-output     [2:0] req_len;
-output     [3:0] req_mask;
+output     [LW-1:0] req_len;
+output     [MW-1:0] req_mask;
 output     [AW-1:0] req_addr;
 output     req_we;
 output     req_wrap;
@@ -45,7 +47,7 @@ output     [DW-1:0] dout;
 
 input      sync;
 
-assign req_mask = 4'hF;
+assign req_mask = {(MW){1'b0}};
 assign req_len = BL;
 assign req_we = 1'b0;
 assign req_wrap = 1'b0;
@@ -59,7 +61,7 @@ localparam IDLE = 2'd0, REQ = 2'd1, XFER = 2'd2, SYNC = 2'd3;
 
 reg [1:0] state = IDLE;
 reg [CW-1:0] cnt = {(CW){1'b0}};
-reg [2:0] len;
+reg [LW-1:0] len;
 
 wire xfer_valid = (state == XFER);
 
@@ -92,7 +94,7 @@ always @(posedge clk) begin
 				state <= IDLE;
 				cnt <= {(CW){1'b0}};
 			end
-			IDLE: if(fifo_lvl < 240) begin
+			IDLE: if(fifo_lvl < BL) begin
 				len <= BL;
 				req_valid <= 1'b1;
 				state <= REQ;
@@ -120,7 +122,7 @@ assign fifo_wr = read_valid & xfer_valid & !fifo_full;
 assign fifo_rd = dout_ready & !fifo_empty;
 
 fifo #(
-	.SIZE(256),
+	.SIZE(BL*2),
 	.DW(DW)
 ) fifo_i (
 	.clk(clk),

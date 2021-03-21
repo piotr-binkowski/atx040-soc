@@ -13,9 +13,9 @@ module req_arbiter(
 );
 
 parameter MASTERS = 2;
-parameter MSTW = $clog2(MASTERS);
+parameter MSTW    = $clog2(MASTERS);
+parameter LW      = 3;
 
-localparam LW = 3;
 localparam MW = 4;
 localparam AW = 32;
 localparam DW = 32;

@@ -29,6 +29,7 @@ module req_wb_bridge(
 );
 
 parameter FIFO_DEPTH = 8;
+parameter LW         = 3;
 
 localparam AW   = 32;
 localparam DW   = 32;
@@ -42,7 +43,7 @@ output reg req_ready;
 
 input req_we;
 input req_wrap;
-input [2:0] req_len;
+input [LW-1:0] req_len;
 input [AW-1:0] req_addr;
 input [COLS-1:0] req_mask;
 
@@ -77,7 +78,7 @@ localparam IDLE = 2'd0, XFER = 2'd1;
 
 reg [1:0] state = IDLE;
 
-reg [2:0] len;
+reg [LW-1:0] len;
 reg wrap;
 
 always @(posedge clk_i) begin

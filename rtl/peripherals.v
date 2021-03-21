@@ -12,12 +12,14 @@ module peripherals(
 	irq_req, irq_vec, irq_ack
 );
 
+parameter LW = 3;
+
 input clk;
 input rst;
 
 input  req_valid;
 output req_ready;
-input  [2:0] req_len;
+input  [LW-1:0] req_len;
 input  [3:0] req_mask;
 input  [31:0] req_addr;
 input  req_we;
@@ -70,7 +72,9 @@ wire [29:0] adr_o;
 wire [31:0] dat_o;
 wire [31:0] dat_i;
 
-req_wb_bridge bridge_i (
+req_wb_bridge #(
+	.LW(LW)
+) bridge_i (
 	.clk_i(clk),
 	.rst_i(rst),
 

@@ -152,6 +152,11 @@ reset_gen reset_gen_i (
 	.reset(reset_ext)
 );
 
+localparam LW = 8;
+localparam MW = 4;
+localparam DW = 32;
+localparam AW = 32;
+
 wire sdram_rst_o = (!cpu_rsto) | reset_ext;
 wire rst_o = sdram_rst_o | (!sdram_init_done);
 
@@ -160,22 +165,24 @@ wire cpu_req_ready, cpu_sdram_req_ready, dma_req_ready, sdram_req_ready, wb_req_
 
 wire cpu_req_we, dma_req_we, sdram_req_we;
 wire cpu_req_wrap, dma_req_wrap, sdram_req_wrap;
-wire [2:0] cpu_req_len, dma_req_len, sdram_req_len;
-wire [3:0] cpu_req_mask, dma_req_mask, sdram_req_mask;
-wire [31:0] cpu_req_addr, dma_req_addr, sdram_req_addr;
+wire [LW-1:0] cpu_req_len, dma_req_len, sdram_req_len;
+wire [MW-1:0] cpu_req_mask, dma_req_mask, sdram_req_mask;
+wire [AW-1:0] cpu_req_addr, dma_req_addr, sdram_req_addr;
 
 wire cpu_write_valid, cpu_sdram_write_valid, dma_write_valid, sdram_write_valid, wb_write_valid;
-wire [31:0] cpu_write_data, dma_write_data, sdram_write_data;
+wire [DW-1:0] cpu_write_data, dma_write_data, sdram_write_data;
 
 wire cpu_read_valid, cpu_sdram_read_valid, dma_read_valid, sdram_read_valid, wb_read_valid;
-wire [31:0] cpu_read_data, cpu_sdram_read_data, dma_read_data, sdram_read_data, wb_read_data;
+wire [DW-1:0] cpu_read_data, cpu_sdram_read_data, dma_read_data, sdram_read_data, wb_read_data;
 wire cpu_read_ack, cpu_sdram_read_ack, dma_read_ack, sdram_read_ack, wb_read_ack;
 
 wire irq_req;
 wire [7:0] irq_vec;
 wire irq_ack;
 
-cpuif cpuif_i (
+cpuif #(
+	.LW(LW)
+) cpuif_i (
 	.clk_i(sys_clk),
 	.rst_i(rst_o),
 
@@ -219,14 +226,16 @@ cpuif cpuif_i (
 	.irq_ack(irq_ack)
 );
 
-wire [13:0] slv_req_valid, slv_write_valid, slv_read_ack;
+localparam DUMMY_SLAVES = 14;
+
+wire [DUMMY_SLAVES-1:0] slv_req_valid, slv_write_valid, slv_read_ack;
 
 req_decoder #(
 	.SLAVES(16)
 ) req_decoder_i (
 	.req_valid(cpu_req_valid),
 	.req_ready(cpu_req_ready),
-	.req_addr(cpu_req_addr[31:28]),
+	.req_addr(cpu_req_addr[(AW-1)-:4]),
 
 	.write_valid(cpu_write_valid),
 
@@ -235,17 +244,18 @@ req_decoder #(
 	.read_valid(cpu_read_valid),
 
 	.slv_req_valid({wb_req_valid, slv_req_valid, cpu_sdram_req_valid}),
-	.slv_req_ready({wb_req_ready, 14'd0, cpu_sdram_req_ready}),
+	.slv_req_ready({wb_req_ready, {(DUMMY_SLAVES){1'b0}}, cpu_sdram_req_ready}),
 
 	.slv_write_valid({wb_write_valid, slv_write_valid, cpu_sdram_write_valid}),
 
 	.slv_read_ack({wb_read_ack, slv_read_ack, cpu_sdram_read_ack}),
-	.slv_read_data({wb_read_data, 448'd0, cpu_sdram_read_data}),
-	.slv_read_valid({wb_read_valid, 14'd0, cpu_sdram_read_valid})
+	.slv_read_data({wb_read_data, {(DW*DUMMY_SLAVES){1'b0}}, cpu_sdram_read_data}),
+	.slv_read_valid({wb_read_valid, {(DUMMY_SLAVES){1'b0}}, cpu_sdram_read_valid})
 );
 
 req_arbiter #(
-	.MASTERS(2)
+	.MASTERS(2),
+	.LW(LW)
 ) req_arbiter_i (
 	.clk(sys_clk),
 	.rst(rst_o),
@@ -287,7 +297,8 @@ wire [31:0] dma_data;
 wire [15:0] pix_data;
 
 req_dma #(
-	.PIXW(16)
+	.PIXW(16),
+	.LW(LW)
 ) req_dma_i (
 	.clk(sys_clk),
 	.rst(rst_o),
@@ -327,7 +338,9 @@ stream_downsize #(
 	.dout(pix_data)
 );
 
-peripherals periph_i (
+peripherals #(
+	.LW(LW)
+) periph_i (
 	.clk(sys_clk),
 	.rst(rst_o),
 
@@ -374,7 +387,9 @@ peripherals periph_i (
 	.irq_ack(irq_ack)
 );
 
-req_sdram sdram_i (
+req_sdram #(
+	.LW(LW)
+) sdram_i (
 	.clk(sys_clk),
 	.rst(sdram_rst_o),
 

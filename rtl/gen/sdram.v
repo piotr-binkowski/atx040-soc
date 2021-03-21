@@ -17,6 +17,7 @@ parameter RW = $clog2(ROWS);
 parameter CW = $clog2(COLS);
 parameter BW = $clog2(BANKS);
 parameter DW = 16;
+parameter LW = 9;
 
 localparam AW = RW+CW+BW;
 localparam MW = DW/8;
@@ -28,7 +29,7 @@ output init_done;
 
 output req_ready;
 input req_valid;
-input [3:0] req_len;
+input [LW-1:0] req_len;
 input [AW-1:0] req_addr;
 input req_we;
 input req_wrap;
@@ -84,6 +85,11 @@ oreg oreg_cs_i (clk, cs, cmd_o[3]);
 oreg oreg_ras_i (clk, ras, cmd_o[2]);
 oreg oreg_cas_i (clk, cas, cmd_o[1]);
 oreg oreg_we_i (clk, we, cmd_o[0]);
+
+initial begin
+	if({1'b1, {(LW-1){1'b0}}} > COLS)
+		$error;
+end
 
 /* Init delay */
 
@@ -149,7 +155,7 @@ assign din_ready = (state == S_WR);
 assign init_done = ref_en;
 
 reg [AW-1:0] addr_i;
-reg [3:0] len_i;
+reg [LW-1:0] len_i;
 reg we_i;
 reg wrap_i;
 

@@ -9,7 +9,7 @@ module req_sdram(
 
 	input [3:0] req_mask,
 	input [31:0] req_addr,
-	input [2:0] req_len,
+	input [LW-1:0] req_len,
 	input req_we,
 	input req_wrap,
 
@@ -33,6 +33,7 @@ module req_sdram(
 	output [1:0] ba
 );
 
+parameter  LW = 8;
 localparam DW = 32;
 localparam FIFO_DEPTH = 8;
 
@@ -128,7 +129,9 @@ fifo #(
 	.full()
 );
 
-sdram sdram_i (
+sdram #(
+	.LW(LW+1)
+) sdram_i (
 	.clk(clk),
 	.rst(rst),
 

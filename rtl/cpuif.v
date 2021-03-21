@@ -25,7 +25,7 @@ module cpuif (
 
 	output reg  req_valid,
 	input  wire req_ready,
-	output reg  [2:0] req_len,
+	output reg  [LW-1:0] req_len,
 	output reg  [3:0] req_mask,
 	output reg  [31:0] req_addr,
 	output reg  req_we,
@@ -47,6 +47,7 @@ module cpuif (
 
 parameter ROM_OFF = 16'hF000;
 parameter CLK_DIV = 3;
+parameter LW      = 3;
 
 assign cpu_irq  = ~irq_req;
 
@@ -166,7 +167,7 @@ always @(posedge clk_i) begin
 		case(state)
 			IDLE: if(phase == 0 && (~cpu_ts)) begin
 				if((cpu_tt == TT_DEF) || (cpu_tt == TT_MOVE16)) begin
-					req_len <= 3'd1;
+					req_len <= 1;
 					case(cpu_siz)
 						SIZ_BYTE: begin
 							case(addr_i[1:0])
@@ -188,7 +189,7 @@ always @(posedge clk_i) begin
 						end
 						SIZ_LINE: begin
 							req_mask <= 4'b1111;
-							req_len  <= 3'd4;
+							req_len  <= 4;
 						end
 					endcase
 					req_addr  <= addr_i;
@@ -253,7 +254,7 @@ always @(posedge clk_i) begin
 			end
 			READ2: if(phase == 1) begin
 				ta_o <= 1'b1;
-				if(req_len == 3'd1) begin
+				if(req_len == 1) begin
 					dir_i <= 1'b1;
 					ad_t  <= 1'b1;
 					state <= IDLE;
@@ -274,7 +275,7 @@ always @(posedge clk_i) begin
 				state       <= WRITE2;
 			end
 			WRITE2: if(phase == 1) begin
-				if(req_len == 3'd1) begin
+				if(req_len == 1) begin
 					ta_o  <= 1'b1;
 					state <= IDLE;
 				end else begin
