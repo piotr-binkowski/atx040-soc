@@ -1,7 +1,7 @@
 module sdram(
 	clk, rst,
 	init_done,
-	req_ready, req_valid, req_len, req_addr, req_we,
+	req_ready, req_valid, req_len, req_addr, req_we, req_wrap,
 	din, din_valid, din_ready, din_mask,
 	dout, dout_valid,
 	cke, cs, ras, cas, we,
@@ -31,6 +31,7 @@ input req_valid;
 input [3:0] req_len;
 input [AW-1:0] req_addr;
 input req_we;
+input req_wrap;
 
 input [DW-1:0] din;
 input [MW-1:0] din_mask;
@@ -150,6 +151,7 @@ assign init_done = ref_en;
 reg [AW-1:0] addr_i;
 reg [3:0] len_i;
 reg we_i;
+reg wrap_i;
 
 reg [CL+1:0] dvalid = {(CL+1){1'b0}};
 
@@ -232,6 +234,7 @@ always @(posedge clk) begin
 					addr_i <= req_addr;
 					len_i  <= req_len;
 					we_i   <= req_we;
+					wrap_i <= req_wrap;
 				end
 			end
 			S_REF: begin
@@ -269,8 +272,11 @@ always @(posedge clk) begin
 
 				if (din_valid) begin
 					cmd_o          <= WRITE;
-					addr_i[2:0] <= addr_i[2:0] + 1'b1;
 					len_i          <= len_i - 1'b1;
+					if(wrap_i)
+						addr_i[2:0] <= addr_i[2:0] + 1'b1;
+					else
+						addr_i[CW-1:0] <= addr_i[CW-1:0] + 1'b1;
 				end
 
 				addr_o         <= addr_i[CW-1:0];
@@ -293,10 +299,13 @@ always @(posedge clk) begin
 			S_RD: begin
 				cmd_o          <= READ;
 				addr_o         <= addr_i[CW-1:0];
-				addr_i[2:0]    <= addr_i[2:0] + 1'b1;
 				dvalid[CL+1]   <= 1'b1;
 				dm_o           <= 2'b00;
 				len_i          <= len_i - 1'b1;
+				if(wrap_i)
+					addr_i[2:0]    <= addr_i[2:0] + 1'b1;
+				else
+					addr_i[CW-1:0] <= addr_i[CW-1:0] + 1'b1;
 
 				if (len_i == 4'd1) begin
 					cmd_d <= 4'd1;

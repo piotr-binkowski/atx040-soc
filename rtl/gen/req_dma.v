@@ -1,7 +1,7 @@
 module req_dma(
 	clk, rst,
 	req_valid, req_ready,
-	req_len, req_mask, req_addr, req_we,
+	req_len, req_mask, req_addr, req_we, req_wrap,
 	write_valid, write_data,
 	read_valid, read_data, read_ack,
 	dout_valid, dout_ready, dout,
@@ -30,6 +30,7 @@ output     [2:0] req_len;
 output     [3:0] req_mask;
 output     [AW-1:0] req_addr;
 output     req_we;
+output     req_wrap;
 
 output     write_valid;
 output     [DW-1:0] write_data;
@@ -47,6 +48,7 @@ input      sync;
 assign req_mask = 4'hF;
 assign req_len = BL;
 assign req_we = 1'b0;
+assign req_wrap = 1'b0;
 
 assign write_valid = 1'b0;
 assign write_data = {(DW){1'b0}};

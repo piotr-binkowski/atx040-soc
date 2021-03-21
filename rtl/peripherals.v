@@ -1,6 +1,7 @@
 module peripherals(
 	clk, rst,
-	req_valid, req_ready, req_len, req_mask, req_addr, req_we,
+	req_valid, req_ready,
+	req_len, req_mask, req_addr, req_we, req_wrap,
 	write_valid, write_data,
 	read_valid, read_ack, read_data,
 	uart_txd, uart_rxd,
@@ -20,6 +21,7 @@ input  [2:0] req_len;
 input  [3:0] req_mask;
 input  [31:0] req_addr;
 input  req_we;
+input  req_wrap;
 
 input  write_valid;
 input  [31:0] write_data;
@@ -78,6 +80,7 @@ req_wb_bridge bridge_i (
 	.req_mask(req_mask),
 	.req_addr(req_addr),
 	.req_we(req_we),
+	.req_wrap(req_wrap),
 
 	.write_valid(write_valid),
 	.write_data(write_data),

@@ -29,6 +29,7 @@ module cpuif (
 	output reg  [3:0] req_mask,
 	output reg  [31:0] req_addr,
 	output reg  req_we,
+	output      req_wrap,
 
 	output reg  write_valid,
 	output reg  [31:0] write_data,
@@ -144,6 +145,8 @@ wire force_rom = (acc_cnt < 2'b10);
 reg read_ack_i = 1'b0;
 
 assign read_ack = (read_ack_i && (phase == 1));
+
+assign req_wrap = 1'b1;
 
 always @(posedge clk_i) begin
 	if(rst_fsm) begin

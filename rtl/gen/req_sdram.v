@@ -11,6 +11,7 @@ module req_sdram(
 	input [31:0] req_addr,
 	input [2:0] req_len,
 	input req_we,
+	input req_wrap,
 
 	input write_valid,
 	input [DW-1:0] write_data,
@@ -138,6 +139,7 @@ sdram sdram_i (
 	.req_len({req_len, 1'b0}),
 	.req_addr({req_addr[24:2], 1'b0}),
 	.req_we(req_we),
+	.req_wrap(req_wrap),
 
 	.din(sdram_write_data),
 	.din_valid(sdram_write_valid),

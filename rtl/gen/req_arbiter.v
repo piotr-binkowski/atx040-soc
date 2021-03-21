@@ -2,12 +2,12 @@ module req_arbiter(
 	clk, rst,
 
 	m_req_valid, m_req_ready,
-	m_req_len, m_req_mask, m_req_addr, m_req_we,
+	m_req_len, m_req_mask, m_req_addr, m_req_we, m_req_wrap,
 	m_write_valid, m_write_data,
 	m_read_valid, m_read_data, m_read_ack,
 
 	req_ready, req_valid,
-	req_len, req_mask, req_addr, req_we,
+	req_len, req_mask, req_addr, req_we, req_wrap,
 	write_valid, write_data,
 	read_valid, read_data, read_ack
 );
@@ -30,6 +30,7 @@ input      [LW*MASTERS-1:0] m_req_len;
 input      [MW*MASTERS-1:0] m_req_mask;
 input      [AW*MASTERS-1:0] m_req_addr;
 input      [MASTERS-1:0] m_req_we;
+input      [MASTERS-1:0] m_req_wrap;
 
 input      [MASTERS-1:0] m_write_valid;
 input      [DW*MASTERS-1:0] m_write_data;
@@ -45,6 +46,7 @@ output reg [LW-1:0] req_len;
 output reg [MW-1:0] req_mask;
 output reg [AW-1:0] req_addr;
 output reg req_we;
+output reg req_wrap;
 
 output reg write_valid;
 output reg [DW-1:0] write_data;
@@ -124,6 +126,7 @@ always @(*) begin
 	req_mask = {(MW){1'b0}};
 	req_addr = {(AW){1'b0}};
 	req_we = 1'b0;
+	req_wrap = 1'b0;
 
 	write_valid = 1'b0;
 	write_data = {(DW){1'b0}};
@@ -141,6 +144,7 @@ always @(*) begin
 				req_mask = m_req_mask[i*MW+:MW];
 				req_addr = m_req_addr[i*AW+:AW];
 				req_we = m_req_we[i];
+				req_wrap = m_req_wrap[i];
 			end
 
 			if(wr_en) begin

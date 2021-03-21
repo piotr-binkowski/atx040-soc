@@ -9,6 +9,7 @@ module req_wb_bridge(
 	req_addr,
 	req_len,
 	req_we,
+	req_wrap,
 
 	write_valid,
 	write_data,
@@ -40,6 +41,7 @@ input  req_valid;
 output reg req_ready;
 
 input req_we;
+input req_wrap;
 input [2:0] req_len;
 input [AW-1:0] req_addr;
 input [COLS-1:0] req_mask;
@@ -76,6 +78,7 @@ localparam IDLE = 2'd0, XFER = 2'd1;
 reg [1:0] state = IDLE;
 
 reg [2:0] len;
+reg wrap;
 
 always @(posedge clk_i) begin
 	if(rst_i) begin
@@ -83,6 +86,7 @@ always @(posedge clk_i) begin
 		wb_stb    <= 1'b0;
 		req_ready <= 1'b0;
 		len       <= 4'd0;
+		wrap      <= 1'b0;
 	end else begin
 		case(state)
 			IDLE: begin 
@@ -94,6 +98,7 @@ always @(posedge clk_i) begin
 					wb_adr_o  <= req_addr[31:2];
 					state     <= XFER;
 					len       <= req_len;
+					wrap      <= req_wrap;
 				end
 			end
 			XFER: begin
@@ -103,8 +108,11 @@ always @(posedge clk_i) begin
 					if (len == 3'b1) begin
 						state <= IDLE;
 					end else begin
-						wb_adr_o[1:0] <= wb_adr_o[1:0] + 1'b1; 
 						len           <= len - 1'b1;
+						if(wrap)
+							wb_adr_o[1:0] <= wb_adr_o[1:0] + 1'b1; 
+						else
+							wb_adr_o <= wb_adr_o + 1'b1; 
 					end
 				end
 			end

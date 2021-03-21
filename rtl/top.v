@@ -159,6 +159,7 @@ wire cpu_req_valid, cpu_sdram_req_valid, dma_req_valid, sdram_req_valid, wb_req_
 wire cpu_req_ready, cpu_sdram_req_ready, dma_req_ready, sdram_req_ready, wb_req_ready;
 
 wire cpu_req_we, dma_req_we, sdram_req_we;
+wire cpu_req_wrap, dma_req_wrap, sdram_req_wrap;
 wire [2:0] cpu_req_len, dma_req_len, sdram_req_len;
 wire [3:0] cpu_req_mask, dma_req_mask, sdram_req_mask;
 wire [31:0] cpu_req_addr, dma_req_addr, sdram_req_addr;
@@ -204,6 +205,7 @@ cpuif cpuif_i (
 	.req_addr(cpu_req_addr),
 	.req_len(cpu_req_len),
 	.req_we(cpu_req_we),
+	.req_wrap(cpu_req_wrap),
 
 	.write_valid(cpu_write_valid),
 	.write_data(cpu_write_data),
@@ -254,6 +256,7 @@ req_arbiter #(
 	.m_req_mask({dma_req_mask, cpu_req_mask}),
 	.m_req_addr({dma_req_addr, cpu_req_addr}),
 	.m_req_we({dma_req_we, cpu_req_we}),
+	.m_req_wrap({dma_req_wrap, cpu_req_wrap}),
 
 	.m_write_valid({dma_write_valid, cpu_sdram_write_valid}),
 	.m_write_data({dma_write_data, cpu_write_data}),
@@ -268,6 +271,7 @@ req_arbiter #(
 	.req_mask(sdram_req_mask),
 	.req_addr(sdram_req_addr),
 	.req_we(sdram_req_we),
+	.req_wrap(sdram_req_wrap),
 
 	.write_valid(sdram_write_valid),
 	.write_data(sdram_write_data),
@@ -294,6 +298,7 @@ req_dma #(
 	.req_mask(dma_req_mask),
 	.req_addr(dma_req_addr),
 	.req_we(dma_req_we),
+	.req_wrap(dma_req_wrap),
 
 	.write_valid(dma_write_valid),
 	.write_data(dma_write_data),
@@ -332,6 +337,7 @@ peripherals periph_i (
 	.req_mask(cpu_req_mask),
 	.req_addr(cpu_req_addr),
 	.req_we(cpu_req_we),
+	.req_wrap(cpu_req_wrap),
 
 	.write_data(cpu_write_data),
 	.write_valid(wb_write_valid),
@@ -380,6 +386,7 @@ req_sdram sdram_i (
 	.req_mask(sdram_req_mask),
 	.req_len(sdram_req_len),
 	.req_we(sdram_req_we),
+	.req_wrap(sdram_req_wrap),
 
 	.write_valid(sdram_write_valid),
 	.write_data(sdram_write_data),
