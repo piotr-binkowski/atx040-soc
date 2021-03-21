@@ -29,7 +29,7 @@ always @(*) begin
 	dout = {(DOUT_DW){1'b0}};
 	for(i = 0; i < RATIO; i = i+1) begin
 		if(mux == i) begin
-			dout = din[i*DOUT_DW+:DOUT_DW];
+			dout = din[(RATIO-1-i)*DOUT_DW+:DOUT_DW];
 		end
 	end
 end
