@@ -291,13 +291,15 @@ req_arbiter #(
 	.read_ack(sdram_read_ack)
 );
 
+localparam PIXW = 8;
+
 wire vga_sync;
 wire dma_data_valid, dma_data_ready, pix_data_valid, pix_data_ready;
-wire [31:0] dma_data;
-wire [15:0] pix_data;
+wire [DW-1:0] dma_data;
+wire [PIXW-1:0] pix_data;
 
 req_dma #(
-	.PIXW(16),
+	.PIXW(PIXW),
 	.LW(LW)
 ) req_dma_i (
 	.clk(sys_clk),
@@ -325,8 +327,8 @@ req_dma #(
 );
 
 stream_downsize #(
-	.DIN_DW(32),
-	.DOUT_DW(16)
+	.DIN_DW(DW),
+	.DOUT_DW(PIXW)
 ) downsize_i (
 	.clk(sys_clk),
 	.rst(rst_o),
@@ -422,7 +424,7 @@ req_sdram #(
 );
 
 wire vga_de;
-assign {vga_r, vga_g, vga_b} = (vga_de) ? {2'b00, pix_data} : {18'd0};
+assign {vga_r, vga_g, vga_b} = (vga_de) ? {pix_data[7:5], 3'd0, pix_data[4:2], 3'd0, pix_data[1:0], 4'd0} : {18'd0};
 
 vga_timing vga_i (
 	.clk(sys_clk),
