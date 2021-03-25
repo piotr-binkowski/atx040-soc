@@ -1,14 +1,28 @@
 module peripherals(
 	clk, rst,
+
 	req_valid, req_ready,
 	req_len, req_mask, req_addr, req_we, req_wrap,
 	write_valid, write_data,
 	read_valid, read_ack, read_data,
+
+	vga_req_valid, vga_req_ready,
+	vga_req_len, vga_req_mask, vga_req_addr, vga_req_we, vga_req_wrap,
+	vga_write_valid, vga_write_data,
+	vga_read_valid, vga_read_data, vga_read_ack,
+
+	vga_pix, vga_clk, vga_hsync, vga_vsync,
+
 	uart_txd, uart_rxd,
+
 	eth_sck, eth_cs, eth_miso, eth_mosi, eth_int,
+
 	flash_sck, flash_cs, flash_miso, flash_mosi,
+
 	sd_sck, sd_cs, sd_miso, sd_mosi,
+
 	i2s_wsel, i2s_dout, i2s_bclk,
+
 	irq_req, irq_vec, irq_ack
 );
 
@@ -31,6 +45,27 @@ input  [31:0] write_data;
 output read_valid;
 input  read_ack;
 output [31:0] read_data;
+
+output vga_req_valid;
+input  vga_req_ready;
+
+output [LW-1:0] vga_req_len;
+output [3:0] vga_req_mask;
+output [31:0] vga_req_addr;
+output vga_req_we;
+output vga_req_wrap;
+
+output vga_write_valid;
+output [31:0] vga_write_data;
+
+input  vga_read_valid;
+input  [31:0] vga_read_data;
+output vga_read_ack;
+
+output [17:0] vga_pix;
+output vga_clk;
+output vga_hsync;
+output vga_vsync;
 
 output uart_txd;
 input  uart_rxd;
@@ -103,21 +138,21 @@ req_wb_bridge #(
 	.wb_dat_i(dat_i)
 );
 
-wire        rom_stb, uart_stb, flash_stb, timer_stb, sd_stb, eth_stb, irqc_stb, i2s_stb;
-wire        rom_ack, uart_ack, flash_ack, timer_ack, sd_ack, eth_ack, irqc_ack, i2s_ack;
-wire [31:0] rom_dat, uart_dat, flash_dat, timer_dat, sd_dat, eth_dat, irqc_dat, i2s_dat;
+wire        rom_stb, uart_stb, flash_stb, timer_stb, sd_stb, eth_stb, irqc_stb, i2s_stb, vga_stb;
+wire        rom_ack, uart_ack, flash_ack, timer_ack, sd_ack, eth_ack, irqc_ack, i2s_ack, vga_ack;
+wire [31:0] rom_dat, uart_dat, flash_dat, timer_dat, sd_dat, eth_dat, irqc_dat, i2s_dat, vga_dat;
 
 wb_decoder #(
-	.SLAVES(8),
+	.SLAVES(9),
 	.SW(4)
 ) decoder_i (
 	.stb_i(stb_o),
 	.adr_i(adr_o[25:22]),
 	.ack_o(ack_i),
 	.dat_o(dat_i),
-	.slv_stb_o({i2s_stb, irqc_stb, eth_stb, sd_stb, timer_stb, flash_stb, uart_stb, rom_stb}),
-	.slv_ack_i({i2s_ack, irqc_ack, eth_ack, sd_ack, timer_ack, flash_ack, uart_ack, rom_ack}),
-	.slv_dat_i({i2s_dat, irqc_dat, eth_dat, sd_dat, timer_dat, flash_dat, uart_dat, rom_dat})
+	.slv_stb_o({vga_stb, i2s_stb, irqc_stb, eth_stb, sd_stb, timer_stb, flash_stb, uart_stb, rom_stb}),
+	.slv_ack_i({vga_ack, i2s_ack, irqc_ack, eth_ack, sd_ack, timer_ack, flash_ack, uart_ack, rom_ack}),
+	.slv_dat_i({vga_dat, i2s_dat, irqc_dat, eth_dat, sd_dat, timer_dat, flash_dat, uart_dat, rom_dat})
 );
 
 wb_mem #(
@@ -264,6 +299,43 @@ wb_i2s i2s_i (
 	.wsel(i2s_wsel),
 	.dout(i2s_dout),
 	.bclk(i2s_bclk)
+);
+
+vga_core vga_i (
+	.clk(clk),
+	.rst(rst),
+
+	.cyc_i(cyc_o),
+	.stb_i(vga_stb),
+
+	.we_i(we_o),
+	.adr_i(adr_o[0]),
+
+	.sel_i(sel_o),
+	.dat_i(dat_o),
+
+	.ack_o(vga_ack),
+	.dat_o(vga_dat),
+
+	.req_valid(vga_req_valid),
+	.req_ready(vga_req_ready),
+	.req_len(vga_req_len),
+	.req_mask(vga_req_mask),
+	.req_addr(vga_req_addr),
+	.req_we(vga_req_we),
+	.req_wrap(vga_req_wrap),
+
+	.write_valid(vga_write_valid),
+	.write_data(vga_write_data),
+
+	.read_valid(vga_read_valid),
+	.read_data(vga_read_data),
+	.read_ack(vga_read_ack),
+
+	.pix_clk(vga_clk),
+	.pix_out(vga_pix),
+	.hsync(vga_hsync),
+	.vsync(vga_vsync)
 );
 
 irqc #(

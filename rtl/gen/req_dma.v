@@ -1,5 +1,6 @@
 module req_dma(
 	clk, rst,
+	base_addr,
 	req_valid, req_ready,
 	req_len, req_mask, req_addr, req_we, req_wrap,
 	write_valid, write_data,
@@ -8,7 +9,6 @@ module req_dma(
 	sync
 );
 
-parameter BASE = 32'h0010_0000;
 parameter RESX = 640;
 parameter RESY = 400;
 parameter PIXW = 16;
@@ -24,6 +24,8 @@ parameter CW = $clog2(TGT);
 
 input      clk;
 input      rst;
+
+input      [DW-1:0] base_addr;
 
 output reg req_valid;
 input      req_ready;
@@ -65,7 +67,7 @@ reg [LW-1:0] len;
 
 wire xfer_valid = (state == XFER);
 
-assign req_addr = BASE + {cnt, 2'b00};
+assign req_addr = base_addr + {cnt, 2'b00};
 
 assign read_ack = (!fifo_full) & xfer_valid;
 assign dout_valid = !fifo_empty;

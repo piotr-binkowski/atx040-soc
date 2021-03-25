@@ -279,55 +279,6 @@ req_arbiter #(
 	.read_ack(sdram_read_ack)
 );
 
-localparam PIXW = 16;
-
-wire vga_sync;
-wire dma_data_valid, dma_data_ready, pix_data_valid, pix_data_ready;
-wire [DW-1:0] dma_data;
-wire [PIXW-1:0] pix_data;
-
-req_dma #(
-	.PIXW(PIXW),
-	.LW(LW)
-) req_dma_i (
-	.clk(sys_clk),
-	.rst(rst_o),
-
-	.req_valid(dma_req_valid),
-	.req_ready(dma_req_ready),
-	.req_len(dma_req_len),
-	.req_mask(dma_req_mask),
-	.req_addr(dma_req_addr),
-	.req_we(dma_req_we),
-	.req_wrap(dma_req_wrap),
-
-	.write_valid(dma_write_valid),
-	.write_data(dma_write_data),
-
-	.read_valid(dma_read_valid),
-	.read_data(dma_read_data),
-	.read_ack(dma_read_ack),
-
-	.dout_valid(dma_data_valid),
-	.dout_ready(dma_data_ready),
-	.dout(dma_data),
-	.sync(vga_sync)
-);
-
-stream_downsize #(
-	.DIN_DW(DW),
-	.DOUT_DW(PIXW)
-) downsize_i (
-	.clk(sys_clk),
-	.rst(rst_o),
-	.din_valid(dma_data_valid),
-	.din_ready(dma_data_ready),
-	.din(dma_data),
-	.dout_valid(pix_data_valid),
-	.dout_ready(pix_data_ready),
-	.dout(pix_data)
-);
-
 peripherals #(
 	.LW(LW)
 ) periph_i (
@@ -348,6 +299,26 @@ peripherals #(
 	.read_ack(wb_read_ack),
 	.read_data(wb_read_data),
 	.read_valid(wb_read_valid),
+
+	.vga_req_valid(dma_req_valid),
+	.vga_req_ready(dma_req_ready),
+	.vga_req_len(dma_req_len),
+	.vga_req_mask(dma_req_mask),
+	.vga_req_addr(dma_req_addr),
+	.vga_req_we(dma_req_we),
+	.vga_req_wrap(dma_req_wrap),
+
+	.vga_write_valid(dma_write_valid),
+	.vga_write_data(dma_write_data),
+
+	.vga_read_valid(dma_read_valid),
+	.vga_read_data(dma_read_data),
+	.vga_read_ack(dma_read_ack),
+
+	.vga_pix({vga_r, vga_g, vga_b}),
+	.vga_clk(vga_clk),
+	.vga_hsync(vga_hsync),
+	.vga_vsync(vga_vsync),
 
 	.uart_txd(uart_txd),
 	.uart_rxd(uart_rxd),
@@ -409,35 +380,6 @@ req_sdram #(
 	.dm(sdram_dm),
 	.a(sdram_a),
 	.ba(sdram_ba)
-);
-
-wire vga_de;
-wire vsync_o, hsync_o;
-reg  vsync_i, hsync_i;
-reg  [17:0] rgb_i;
-
-always @(posedge sys_clk) begin
-	if(PIXW == 8)
-		rgb_i   <= (vga_de) ? {pix_data[7:5], 3'd0, pix_data[4:2], 3'd0, pix_data[1:0], 4'd0} : {18'd0};
-	else if(PIXW == 16)
-		rgb_i   <= (vga_de) ? {pix_data[15:11], 1'b0, pix_data[10:5], pix_data[4:0], 1'b0} : {18'd0};
-
-	hsync_i <= hsync_o;
-	vsync_i <= vsync_o;
-end
-
-assign vga_hsync = hsync_i;
-assign vga_vsync = vsync_i;
-assign {vga_r, vga_g, vga_b} = rgb_i;
-
-vga_timing vga_i (
-	.clk(sys_clk),
-	.vsync(vsync_o),
-	.hsync(hsync_o),
-	.de(vga_de),
-	.ack(pix_data_ready),
-	.sync(vga_sync),
-	.vclk(vga_clk)
 );
 
 assign eth_rst  = !rst_o;
